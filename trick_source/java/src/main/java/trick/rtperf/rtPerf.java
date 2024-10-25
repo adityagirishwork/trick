@@ -10,6 +10,8 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.event.*;
 
+import trick.common.utils.VariableServerConnection;
+
 class JobExecutionEvent {
     public String id;
     public boolean isEOF;
@@ -460,3 +462,33 @@ class TraceViewMenuBar extends JMenuBar implements ActionListener {
         }
     }
 } // class TraceViewMenuBar
+
+class TraceViewWindow extends JFrame {
+    private ArrayList<JobExecutionEvent> jobExecList;
+    private TraceViewCanvas traceViewCanvas;
+    private JobStats jobStats;
+
+    public TraceViewWindow(ArrayList<JobExecutionEvent> jobExecList) {
+        this.jobExecList = jobExecList;
+        traceViewCanvas = new TraceViewCanvas(jobExecList);
+
+        // FILL IN THE REST OF THE GUI HERE IT IS NOT DONE.
+
+        // Creates a new thread for data retreival from the variable server.
+        new Thread(() -> {
+            try {
+                VariableServerConnection connection = new VariableServerConnection(trick.var_server_get_hostname(), trick.var_server_get_port());
+                connection.setAscii(); 
+
+                while (true) {
+                    String data = connection.get();
+                    updateJobExecutionList(data); // Process the data (e.g., parse values, update jobExecList)
+                    traceViewCanvas.update(jobExecList);
+                    jobStats = new JobStats(jobExecList);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+}
