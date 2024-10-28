@@ -490,5 +490,54 @@ class TraceViewWindow extends JFrame {
                 e.printStackTrace();
             }
         }).start();
+
+        TraceViewOutputToolBar outputToolBar = new TraceViewOutputToolBar();
+        TraceViewCanvas traceView = new TraceViewCanvas( jobExecList, outputToolBar);
+
+        TraceViewMenuBar menuBar = new TraceViewMenuBar(traceView);
+        setJMenuBar(menuBar);
+
+        TraceViewInputToolBar nToolBar = new TraceViewInputToolBar( traceView );
+        add(nToolBar, BorderLayout.NORTH);
+
+        JScrollPane scrollPane = new JScrollPane( traceView );
+        scrollPane.setPreferredSize(new Dimension(800, 400));
+
+        JPanel tracePanel = new JPanel();
+        tracePanel.setPreferredSize(new Dimension(800, 400));
+        tracePanel.add(scrollPane);
+        tracePanel.setLayout(new BoxLayout(tracePanel, BoxLayout.X_AXIS));
+
+        JPanel mainPanel  = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.add(tracePanel);
+
+        add(outputToolBar, BorderLayout.SOUTH);
+
+        setTitle("JobPerf");
+        setSize(800, 500);
+        add(mainPanel);
+        pack();
+        setVisible(true);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setFocusable(true);
+        setVisible(true);
+
+        traceView.repaint();
+
+    }
+
+    private void updateJobExecutionList(String data) {
+        // Parse the data and extract the relevant values.
+        // Update the jobExecList with the new JobExecutionEvent objects
+        // This is the thing that Mark was talking about where it already parses it for you
+    }
+
+    private List<JobExecutionEvent> parseData(String data) {
+        // Implement your parsing logic here, using the existing script that Mark talked about.
+        // ...
+        List<JobExecutionEvent> events = new ArrayList<>();
+        // Add parsed events to the list
+        return events;
     }
 }
