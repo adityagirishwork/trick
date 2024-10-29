@@ -5,6 +5,7 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.Math;
+import java.net.Socket;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
@@ -464,33 +465,8 @@ class TraceViewMenuBar extends JMenuBar implements ActionListener {
 } // class TraceViewMenuBar
 
 class TraceViewWindow extends JFrame {
-    private ArrayList<JobExecutionEvent> jobExecList;
-    private TraceViewCanvas traceViewCanvas;
-    private JobStats jobStats;
 
-    public TraceViewWindow(ArrayList<JobExecutionEvent> jobExecList) {
-        this.jobExecList = jobExecList;
-        traceViewCanvas = new TraceViewCanvas(jobExecList);
-
-        // FILL IN THE REST OF THE GUI HERE IT IS NOT DONE.
-
-        // Creates a new thread for data retreival from the variable server.
-        new Thread(() -> {
-            try {
-                VariableServerConnection connection = new VariableServerConnection(trick.var_server_get_hostname(), trick.var_server_get_port());
-                connection.setAscii(); 
-
-                while (true) {
-                    String data = connection.get();
-                    updateJobExecutionList(data); // Process the data (e.g., parse values, update jobExecList)
-                    traceViewCanvas.update(jobExecList);
-                    jobStats = new JobStats(jobExecList);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
-
+    public TraceViewWindow( ArrayList<JobExecutionEvent> jobExecList ) {
         TraceViewOutputToolBar outputToolBar = new TraceViewOutputToolBar();
         TraceViewCanvas traceView = new TraceViewCanvas( jobExecList, outputToolBar);
 
@@ -524,20 +500,56 @@ class TraceViewWindow extends JFrame {
         setVisible(true);
 
         traceView.repaint();
+    }
+} // class TraceViewWindow
 
+public class rtPerf extends JFrame {
+    private ArrayList<JobExecutionEvent> jobExecList;
+    private TraceViewCanvas traceViewCanvas;
+
+    public rtPerf() {
+        jobExecList = new ArrayList<>();
+        traceViewCanvas = new TraceViewCanvas(jobExecList);
+
+        // Sets up the main frame
+        setTitle("Real-Time Performance Monitor");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+
+        getContentPane().add(traceViewCanvas);
+
+        // Starts a seperate thread for RT data retreival.
+        new Thread(() -> {
+            try {
+                Socket socket = new Socket(trick.var_server_get_hostname(), trick.var_server_get_port()); // Grabs the host name and port using variable server functions
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                while (true) {
+                    String data = reader.readLine();
+                    if (data == null)  {
+                        break; // Handles connection terminiation
+                    }
+                    updateJobExecutionList(data);
+                    SwingUtilities.invokeLater(() -> {
+                        traceViewCanvas.repaint();
+                    });
+                }
+
+                reader.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        setVisible(true);
     }
 
-    private void updateJobExecutionList(String data) {
-        // Parse the data and extract the relevant values.
-        // Update the jobExecList with the new JobExecutionEvent objects
-        // This is the thing that Mark was talking about where it already parses it for you
+    private void updateJobExecutionList(String data) { // Updates the job exec list based on the data
+        synchronized (jobExecList) {
+            jobExecList.addAll(data);
+        }
     }
 
-    private List<JobExecutionEvent> parseData(String data) {
-        // Implement your parsing logic here, using the existing script that Mark talked about.
-        // ...
-        List<JobExecutionEvent> events = new ArrayList<>();
-        // Add parsed events to the list
-        return events;
-    }
+    // ... Add in the rest of the code, including TraceViewCanvas, etc
 }
