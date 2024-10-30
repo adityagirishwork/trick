@@ -513,7 +513,7 @@ public class rtPerf extends JFrame {
         traceViewCanvas = new TraceViewCanvas(jobExecList);
 
         // Sets up the main frame
-        setTitle("Real-Time Performance Monitor");
+        setTitle("Real-Time Jobs");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
 
