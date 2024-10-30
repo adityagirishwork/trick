@@ -1,4 +1,4 @@
-package main.java.trick.rtperf;
+package trick.rtperf;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -508,7 +508,7 @@ public class rtPerf extends JFrame {
     private ArrayList<JobExecutionEvent> jobExecList;
     private TraceViewCanvas traceViewCanvas;
 
-    public rtPerf() {
+    public rtPerf(String [] args) {
         jobExecList = new ArrayList<>();
         traceViewCanvas = new TraceViewCanvas(jobExecList);
 
