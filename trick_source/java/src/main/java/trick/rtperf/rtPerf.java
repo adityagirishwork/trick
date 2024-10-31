@@ -490,7 +490,7 @@ class TraceViewWindow extends JFrame {
 
         add(outputToolBar, BorderLayout.SOUTH);
 
-        setTitle("JobPerf");
+        setTitle("rtPerf");
         setSize(800, 500);
         add(mainPanel);
         pack();
@@ -521,20 +521,17 @@ public class rtPerf extends JFrame {
         // Starts a seperate thread for RT data retreival.
         new Thread(() -> {
             try {
-                Socket socket = new Socket(trick.var_server_get_hostname(), trick.var_server_get_port()); // Grabs the host name and port using variable server functions
+                Socket socket = new Socket(trick.var_server_get_hostname(), trick.var_server_get_port());
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
+        
                 while (true) {
                     String data = reader.readLine();
-                    if (data == null)  {
-                        break; // Handles connection terminiation
+                    if (data == null) {
+                        break; // Handle connection termination
                     }
                     updateJobExecutionList(data);
-                    SwingUtilities.invokeLater(() -> {
-                        traceViewCanvas.repaint();
-                    });
                 }
-
+        
                 reader.close();
                 socket.close();
             } catch (IOException e) {
