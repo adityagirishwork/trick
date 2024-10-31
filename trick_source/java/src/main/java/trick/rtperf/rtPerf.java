@@ -12,7 +12,6 @@ import javax.swing.*;
 import javax.swing.event.*;
 
 import trick.common.utils.VariableServerConnection;
-import trick.jobperf.JobPerf;
 
 class JobExecutionEvent {
     public String id;
@@ -553,6 +552,6 @@ public class rtPerf extends JFrame {
     }
 
     public static void main(String[] args) {
-        rtPerf rtPerf = new rtPerf( args );
+        rtPerf rtPerf = new rtPerf(args);
     } // main
 }
