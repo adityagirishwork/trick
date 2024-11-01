@@ -1,5 +1,7 @@
+// Package
 package trick.rtperf;
 
+// Imports
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -12,6 +14,13 @@ import javax.swing.*;
 import javax.swing.event.*;
 
 import trick.common.utils.VariableServerConnection;
+import trick.common.TrickApplication;
+import trick.common.ui.UIUtils;
+import trick.common.ui.components.FontChooser;
+import trick.common.ui.panels.AnimationPlayer;
+import trick.common.ui.panels.FindBar;
+import trick.simcontrol.utils.SimControlActionController;
+import trick.simcontrol.utils.SimState;
 
 class JobExecutionEvent {
     public String id;
