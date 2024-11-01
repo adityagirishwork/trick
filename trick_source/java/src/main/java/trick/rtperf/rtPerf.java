@@ -509,7 +509,8 @@ public class rtPerf extends JFrame {
 
     public rtPerf(String [] args) {
         jobExecList = new ArrayList<>();
-        traceViewCanvas = new TraceViewCanvas(jobExecList);
+        TraceViewOutputToolBar outputToolBar = new TraceViewOutputToolBar();
+        traceViewCanvas = new TraceViewCanvas(jobExecList, outputToolBar);
 
         // Sets up the main frame
         setTitle("Real-Time Jobs");
@@ -542,13 +543,22 @@ public class rtPerf extends JFrame {
         setVisible(true);
     }
 
-    private void updateJobExecutionList(String data) { // Updates the job exec list based on the data
+    private void updateJobExecutionList(String data) {
         synchronized (jobExecList) {
-            jobExecList.addAll(data);
+            String[] parts = data.split(","); // Need to check to see if the data is comma seperated or tab seperated.
+            if (parts.length >= 5) {
+                String id = parts[0];
+                boolean isEOF = Boolean.parseBoolean(parts[1]);
+                boolean isTOF = Boolean.parseBoolean(parts[2]);
+                double start = Double.parseDouble(parts[3]);
+                double stop = Double.parseDouble(parts[4]);
+                JobExecutionEvent event = new JobExecutionEvent(id, isEOF, isTOF, start, stop);
+                jobExecList.add(event);
+            }
         }
     }
 
     public static void main(String[] args) {
-        rtPerf rtPerf = new rtPerf(args);
+        rtPerf rtperf = new rtPerf( args );
     } // main
-}
+} // class rtPerf
