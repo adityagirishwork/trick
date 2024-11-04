@@ -7,11 +7,18 @@ import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.lang.Math;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.UnresolvedAddressException;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -473,6 +480,306 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             getAction("connect").setEnabled(true);           
             runningSimList.setEnabled(true);
             getAction("startSim").setEnabled(false);
+        }
+    }
+
+    /**
+     * Inner class for the task of monitoring health status.
+     */
+    private class MonitorHealthStatusTask extends Task<Void, Void> {
+        public MonitorHealthStatusTask(Application app) {
+            super(app);
+        }
+        
+        /*
+         * Main task. Executed in background thread.
+         */
+        @Override
+        public Void doInBackground() {
+            charset = Charset.forName("ISO-8859-1");
+            CharsetDecoder decoder = charset.newDecoder();
+            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 1024);
+
+            CharBuffer charBuffer = null;
+            Document doc = statusMsgPane.getDocument();
+            StyleContext sc = new StyleContext();
+            
+            // normal style is white on black
+            Style defaultStyle = sc.addStyle("Default", null);
+            
+            setColorStyleAttr(defaultStyle, Color.white, Color.black);
+            
+            // green - is there any reason not using the Color.green?
+            Color greenColor = new Color(150,230,30);
+            Style greenStyle = sc.addStyle("Green", null);
+            setColorStyleAttr(greenStyle, greenColor, Color.black);
+            
+            // yellow
+            Style yellowStyle = sc.addStyle("Yellow", null);
+            setColorStyleAttr(yellowStyle, Color.yellow, Color.black);
+            
+            // red
+            Style redStyle = sc.addStyle("Red", null);
+            setColorStyleAttr(redStyle, Color.red, Color.black);
+            
+            // cyan
+            Style cyanStyle = sc.addStyle("Cyan", null);
+            setColorStyleAttr(cyanStyle, Color.cyan, Color.black);
+            
+            try {
+                healthStatusSocketChannel = SocketChannel.open() ;
+                healthStatusSocketChannel.configureBlocking(true) ;
+
+                healthStatusSocketChannel.connect(new InetSocketAddress(host, message_port)) ;
+            } catch (IOException e) {
+            } catch (UnresolvedAddressException uae) {
+                /** Connection to variable server is not working with the
+                 *  current hostname, but it is working if localhost is
+                 *  substituted as the hostname. So change it now
+                 *  for future use when TV and MTV are launched.
+                 */
+                host = LOCALHOST;
+            }
+
+            while (true) {
+                try {
+                    if (healthStatusSocketChannel != null) {
+                        try {
+                            byteBuffer.clear();
+                            int numBytesRead = healthStatusSocketChannel.read(byteBuffer);
+                            if (numBytesRead == -1) {
+                                continue;
+                            } else {
+                                byteBuffer.flip();
+                                try {
+                                    charBuffer = decoder.decode(byteBuffer);
+
+                                    String charStr = charBuffer.toString();
+
+                                    int returnCounts = statusMsgPane.getText().split("\n", -1).length;
+
+                                    if (returnCounts > 99999) {
+                                    	doc.remove(0, doc.getLength());
+                                    }
+
+                                    // interpret ansi escape color sequences
+                                    String tokens[] = charStr.split("\033") ;
+                                    // ansi escape is 4 characters: [NNm where NN is 2 digit color number
+                                    for (String token : tokens) {
+                                        int ansicolor = 0 ;
+                                        String coloredpart = token;
+                                        if (token.charAt(0) == '\133') { // open square bracket
+                                        	// get the 1st m locaction
+                                        	int mLoc = token.indexOf('m');
+                                        	if (mLoc != -1) {
+                                        		try {
+                                        			ansicolor = Integer.parseInt(token.substring(1, mLoc));
+                                        			coloredpart = token.substring(mLoc+1);
+                                        		} catch (Exception ex) {
+                                        			// do nothing, coloredpart is printed in normal
+                                        		}
+                                        	}
+                                        }
+                                        if (coloredpart.length() == 0) {
+                                            continue;
+                                        }
+                                        switch (ansicolor) {
+                                            case 0 :  // normal
+                                                doc.insertString(doc.getLength(), coloredpart, defaultStyle) ;
+                                                break;
+                                            case 32 : // green
+                                                doc.insertString(doc.getLength(), coloredpart, greenStyle) ;
+                                                break;
+                                            case 33 : // yellow
+                                                doc.insertString(doc.getLength(), coloredpart, yellowStyle) ;
+                                                break;
+                                            case 31 : // red
+                                                doc.insertString(doc.getLength(), coloredpart, redStyle) ;
+                                                break;
+                                            case 36 : // cyan
+                                                doc.insertString(doc.getLength(), coloredpart, cyanStyle) ;
+                                                break;
+                                            default : // normal
+                                                doc.insertString(doc.getLength(), coloredpart, defaultStyle) ;
+                                                break;
+                                        }
+                                    }
+                                    // Always scroll to the end
+                                    statusMsgPane.setCaretPosition(doc.getLength());
+                                    statusMsgPane.validate();
+
+                                } catch (CharacterCodingException e) {
+                                    continue;
+                                } catch (BadLocationException ble) {
+                                    continue;
+                                }
+                                continue;
+                            }
+                        } catch (IOException e) {
+                            break;
+                        } catch (NotYetConnectedException nc) {
+                        }
+                    }
+                } finally {
+                    if (runtimeStatePanel.getTitle() == "Sim Complete") {
+                        // Always scroll to the end
+                        statusMsgPane.setCaretPosition(statusMsgPane.getDocument().getLength());
+                        break;
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void finished() {
+            try {
+                if (healthStatusSocketChannel != null) {
+                    healthStatusSocketChannel.close() ;
+                }
+            } catch (java.io.IOException ioe) {
+
+            }
+        }
+    }
+
+    /**
+     * Inner class for the task of monitoring the status of the currently running simulation.
+     *
+     */
+    private class MonitorSimStatusTask extends Task<Void, Void> {
+        /**
+         * Constructor with specified {@link Application}.
+         *
+         * @param app    The specified {@link Application} that needs Sim status monitoring.
+         */
+        public MonitorSimStatusTask(Application app) {
+            super(app);
+        }
+
+        @Override
+        protected Void doInBackground() {
+            String results[] = null;
+            int ii ;
+
+            while (true) {
+
+                try {
+
+                    if (statusSimcom != null) {
+
+                        String resultsStr = statusSimcom.get();
+                        if (resultsStr == null) 
+                            break;
+
+                        results = resultsStr.split("\t");
+                        ii = 1 ;
+
+                        // whenever there is data in statusSimcom socket, do something
+                        if (results != null && results[0].equals("0")) {
+                            // "trick_sys.sched.time_tics"
+                            if (results[ii] != null && results[ii] != "") {
+                                double time_tics = Double.parseDouble(results[ii]);                                
+                                double execOutTime = time_tics/execTimeTicValue;
+                                simState.setExecOutTime(execOutTime);
+                                ii++ ;
+                            }
+
+                            // "trick_sys.sched.mode"
+                            if (results.length > ii && results[ii] != null && results[ii] != "") {
+                                modeIndex = Integer.parseInt(results[ii]);
+                                simState.setMode(modeIndex);
+                                switch (modeIndex) {
+                                    case SimState.INITIALIZATION_MODE:
+                                    	//currentSimStatusDesc = "Ready to Run";
+                                        //setSimStateDesc(currentSimStatusDesc);
+                                        //break;
+                                    case SimState.DEBUG_STEPPING_MODE:
+                                    case SimState.EXIT_MODE:
+                                        break;
+                                    // need to setProgress for FREEZE_MODE because a checkpoint could be loaded
+                                    // during this mode and that could have a new elapsed time.
+                                    case SimState.FREEZE_MODE:
+                                    case SimState.RUN_MODE:
+                                    	// need to minus the sim start time as it could be a negative number
+                                    	setProgress(Math.abs((float)((simState.getExecOutTime()-simStartTime)/simStopTime)));                                    	
+                                        break;
+                                }
+                                ii++ ;
+                            }
+
+                            // "real_time.rt_sync.actual_run_ratio"
+                            if (results.length > ii && results[ii] != null && results[ii] != "") {
+                                simState.setSimRealtimeRatio(Float.parseFloat(results[ii]));
+                                ii++ ;
+                            }
+
+                            // "real_time.rt_sync.active"
+                            if (results.length > ii && results[ii] != null && results[ii] != "") {
+                                simState.setRealtimeActive(Integer.parseInt(results[ii]));
+                                ii++;
+                            }
+
+                            // "instruments.debug_pause.debug_pause_flag"
+                            if (debug_present == 1 && results.length > ii && results[ii] != null && results[ii] != "") {
+                                debug_flag = Integer.parseInt(results[ii]);
+                                if ( debug_flag == 1 ) {
+                                    simState.setMode(SimState.DEBUG_STEPPING_MODE);
+                                }
+                                ii++ ;
+                            }
+
+                            // "real_time.rt_sync.total_overrun"
+                            if (overrun_present == 1 && results.length > ii && results[ii] != null && results[ii] != "") {
+                                simState.setOverruns(Integer.parseInt(results[ii]));
+                                ii++ ;
+                            }
+                            updateGUI();
+                        } else {
+                            // break the while (true) loop
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    break;
+                }
+            } // end while (true)
+            return null;
+        }
+
+        @Override
+        protected void succeeded(Void ignored) {
+            simState.setMode(SimState.COMPLETE_MODE);
+
+            // Commented out the following code so that the sim time won't be set unnecessary.
+            // However, sometimes you probably will see the sim time is not updated
+            // to the stop time when it's completed due to the reason as stated following.
+            // Trick 7 seems to have this issue too and I guess people are ok with it.
+            /*if (modeIndex != SimState.FREEZE_MODE) {
+                // due to the delay on client side, when the server is done and closes the connection,
+                // the client might have not received the latest time. so making sure to show
+                // the stop time at the end.
+                simState.setExecOutTime(simStopTime);
+                setProgress(100);
+            }*/
+            updateGUI();
+        }
+
+        @Override
+        protected void finished() {
+            try {
+                if (commandSimcom != null) {
+                    commandSimcom.close();
+                }
+                if (statusSimcom != null) {
+                    statusSimcom.close();
+                }
+                if (isAutoExitOn) {
+                	exit();
+                }
+            }
+            catch (IOException e) {
+            }
         }
     }
 
