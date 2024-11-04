@@ -569,6 +569,35 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     }
 
     /**
+     * Enable all buttons on the Commands panel.
+     */
+    private void enableAllCommands() {
+        for ( String btn : getAllCommandActions() ) {
+            setActionsEnabled( btn, true );
+        }
+    }
+
+    /**
+     * Disable all buttons on the Commands panel.
+     */
+    private void disableAllCommands() {
+        for ( String btn : getAllCommandActions() ) {
+            setActionsEnabled( btn, false );
+        }
+    }
+
+    /**
+     * Returns all {@link Action} names associated with the Commands panel.
+     */
+    private String[] getAllCommandActions() {
+        ArrayList<String> actions = new ArrayList<String>();
+
+        actions.add("stepSim,recordingSim,startSim,realtime,freezeSim," +
+        		"dumpChkpntASCII,shutdownSim,loadChkpnt,lite,quit");
+        return actions.toArray(new String[0]);
+    }
+
+    /**
      * Updates the GUI as needed if SIM states are changed.
      */
     private void updateGUI() {
