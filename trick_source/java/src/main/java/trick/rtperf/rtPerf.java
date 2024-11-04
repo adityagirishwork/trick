@@ -7,7 +7,10 @@ import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.lang.Math;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -483,6 +486,88 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         }
     }
 
+    //========================================
+    //    Inner Classes
+    //========================================
+    private class RetrieveHostPortTask extends SwingWorker<Void, Void> {
+    	
+    	private MulticastSocket multicastSocket = null;
+    	
+    	@Override
+        public Void doInBackground() {
+    		while (getAction("connect").isEnabled()) {
+    			retrieveHostPort();
+    		}
+            return null;
+        }
+    	
+    	@Override
+    	public void done() {
+    		if (multicastSocket != null) {
+                multicastSocket.close();
+            }
+    	}
+    	
+    	/**
+    	 * Helper method for retrieving the host and its listening ports.
+    	 * 
+    	 */
+    	//for Java 7, the type of elements of JComboBox needs to be specified to avoid the warning and it's not supported in Java 6
+    	@SuppressWarnings("unchecked")
+    	private void retrieveHostPort() {
+    	    try {
+    	    	multicastSocket = new MulticastSocket(9265);
+    	        InetAddress group = InetAddress.getByName("239.3.14.15");
+    	        multicastSocket.joinGroup(group);
+    	         
+    	        byte[] buffer = new byte[1024];
+    	        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+    	        multicastSocket.receive(packet);
+
+    	        // Remove the trailing newline, and split the tab-delimitted message.
+    	        String[] info = new String(packet.getData(), packet.getOffset(), packet.getLength()).replace("\n", "").split("\t");
+    	        // Reset the packet length or future messages will be clipped.
+    	        packet.setLength(buffer.length);
+    	        // version Trick 10 or later	           	       
+    	        if (info[7] != null) {	    	        
+	    	        if (runningSimList != null) {
+	    	        	String hostPort = info[0] + " : " + info[1] + " (" + info[5] + " " + info[6] + ")";
+	    	        	if (!UIUtils.comboBoxContains((DefaultComboBoxModel)runningSimList.getModel(), hostPort)) {
+	    	        		// only show localhost's resource
+	    	        		// TODO: may want to have whole network resource
+	    	        		if (InetAddress.getLocalHost().equals(InetAddress.getByName(info[0]))) {
+	    	        			runningSimList.addItem(hostPort);
+	    	        			runningSimList.setSelectedItem(hostPort);	    	        			
+	    	        		}
+	    	        	}	    	        	
+	    	        }
+    	        }
+    	    } catch (IOException ioe) {
+    	    	// do nothing
+    	    }    		
+    	}   	
+    }
+        
+    /**
+     * Inner class for the task of rebuiding those fields for Sim run & overrun info.
+     * This is used when the user launch Sim Control before starting the server.
+     */
+    private class RebuildSimOverrunPanelTask extends SwingWorker<Void, Void> {
+        @Override
+        public Void doInBackground() {
+            for(int i=2; i<simOverrunPanel.getComponentCount(); i++) {
+                simOverrunPanel.remove(simOverrunPanel.getComponent(i));
+            }
+
+            addFieldsToSimOverrunPanel(simOverrunPanel);
+            return null;
+        }
+        @Override
+		public void done() {
+            simOverrunPanel.validate();
+        }
+    }
+    
     /**
      * Inner class for the task of monitoring health status.
      */
