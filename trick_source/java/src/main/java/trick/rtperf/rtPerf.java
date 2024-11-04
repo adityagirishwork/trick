@@ -1,17 +1,23 @@
-// Package
 package trick.rtperf;
 
 // Imports
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.lang.Math;
 import java.net.Socket;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.swing.*;
 import javax.swing.event.*;
+// import javax.xml.ws.Action;
 
 import trick.common.utils.VariableServerConnection;
 import trick.common.TrickApplication;
@@ -19,10 +25,202 @@ import trick.common.ui.UIUtils;
 import trick.common.ui.components.FontChooser;
 import trick.common.ui.panels.AnimationPlayer;
 import trick.common.ui.panels.FindBar;
+import trick.simcontrol.SimControlApplication;
 import trick.simcontrol.utils.SimControlActionController;
 import trick.simcontrol.utils.SimState;
 
-class JobExecutionEvent {
+import org.jdesktop.application.Action;
+import org.jdesktop.application.Application;
+import org.jdesktop.application.Task;
+import org.jdesktop.application.View;
+import org.jdesktop.swingx.JXEditorPane;
+import org.jdesktop.swingx.JXLabel;
+import org.jdesktop.swingx.JXPanel;
+import org.jdesktop.swingx.JXStatusBar;
+import org.jdesktop.swingx.JXTitledPanel;
+import org.jdesktop.swingx.JXTitledSeparator;
+
+public class rtPerf extends TrickApplication implements PropertyChangeListener {
+    
+    private int modeindex = -1;
+    private int debug_flag;
+    private int debug_present;
+    private int message_present;
+    private int message_port;
+    private static boolean isAutoExitOn; // Checks whether to automatically exit the simulation when it is done/killed.
+
+    private JXTitledPanel runtimeStatePanel; // The panel that displays the current sim state description as well as progress.
+    private String currentSimStatusDesc = "None";
+    private JProgressBar progressBar;
+    private boolean enableProgressBar = true; // Always enable progress bar unless the sim termination time is not defined
+
+    private VariableServerConnection commandSimcom; // VariableServerConnection for sending and receiving variable server commands.
+    private VariableServerConnection statusSimcom; // Variable Server Connection for received the simulation state from the variable server.
+    private SocketChannel healthStatusSocketChannel; // Socket for receiving health and status messages.
+
+    private JComboBox runningSimList;
+    private static String host;
+    private static int port = -1;
+    private static boolean isRestartOptionOn;
+    private boolean errOnInitConnect = false; // True if an error was encountered during the attempt to connect to Variable Server during intialize()
+    private int varServerTimeout = 5000; // Time out when attempting to establish connection with Variable Server in milliseconds
+    
+    // The object of SimState that has Sim state data.
+    private SimState simState;
+    private String customizedCheckpointObjects;
+
+    private static Charset charset;
+    
+
+    final private static String LOCALHOST = "localhost";
+
+	final private Dimension FULL_SIZE = new Dimension(680, 640);
+	final private Dimension LITE_SIZE = new Dimension(340, 360);
+
+    @Action
+    public void startRT() {
+        launchTrickApplication("rtperf", "--host " + host + " --port " + port);
+    }
+
+    /**
+     * Connects to the variable server if {@link VariableServerConnection} is able to be created successfully and
+     * starts the communication server for sim health status messages.
+     */
+    @Action
+    public void connect() {
+        // get host and port for selected sim  	
+        if (runningSimList != null && runningSimList.getSelectedItem() != null) {
+        	String selectedStr = runningSimList.getSelectedItem().toString();
+        	// remove the run info if it is shown
+        	int leftPre = selectedStr.indexOf("(");
+        	if (leftPre != -1) {
+        		selectedStr = selectedStr.substring(0, leftPre);
+        	}
+        	// can be separated either by : or whitespace
+        	String[] elements = selectedStr.split(":");
+        	
+        	if (elements == null || elements.length < 2) {
+        		elements = selectedStr.split("\\s+");
+        	}
+        	
+        	if (elements == null || elements.length < 2) {       
+				String errMsg = "Can't connect! Please provide valid host name and port number separated by : or whitespace!";		
+                printErrorMessage(errMsg);
+        		return;
+        	}
+        	host = elements[0].trim();
+        	try {
+        	port = Integer.parseInt(elements[1].trim());
+        	} catch (NumberFormatException nfe) {
+				String errMsg = elements[1] + " is not a valid port number!";
+        		printErrorMessage(errMsg);
+        		return;
+        	}
+        }
+        
+        getInitializationPacket();
+        
+        if (commandSimcom == null) {
+			String errMsg = "Sorry, can't connect. Please make sure the availability of both server and port!";
+			printErrorMessage(errMsg);
+            return;
+        } else {            
+            Object[] keys = actionMap.allKeys();
+            // If there is a server connection established, enable all actions.
+            for (int i = 0; i < keys.length; i++) {
+                String theKey = (String)keys[i];
+                getAction(theKey).setEnabled(true);
+            }
+        }
+
+        scheduleGetSimState();
+
+        startStatusMonitors();
+    }
+
+    public static void main(String[] args) {
+        Application.launch(rtPerf.class, args);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* class JobExecutionEvent {
     public String id;
     public boolean isEOF;
     public boolean isTOF;
@@ -570,4 +768,4 @@ public class rtPerf extends JFrame {
     public static void main(String[] args) {
         rtPerf rtperf = new rtPerf( args );
     } // main
-} // class rtPerf
+} // class rtPerf */
