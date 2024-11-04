@@ -21,9 +21,11 @@ import javax.swing.*;
 import javax.swing.event.*;
 // import javax.xml.ws.Action;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.Document;
 import javax.swing.text.Style;
 import javax.swing.text.StyleContext;
+import javax.swing.text.StyledEditorKit;
 
 import trick.common.utils.VariableServerConnection;
 import trick.common.TrickApplication;
@@ -175,6 +177,24 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 			System.err.println( "Sim Control Error at Initialization: \n" + err);
 		}
 	}
+
+    /**
+     * Creates the panel for displaying the sim health status messages.
+     */
+    private JPanel createStatusMsgPanel() {
+        statusMsgPane = new JXEditorPane();
+        statusMsgPane.setDocument(new DefaultStyledDocument());
+        statusMsgPane.setEditorKit(new StyledEditorKit());    
+        statusMsgPane.putClientProperty(JXEditorPane.HONOR_DISPLAY_PROPERTIES, true);
+        statusMsgPane.setBackground(Color.black);
+
+        int curr_font_size = statusMsgPane.getFont().getSize() ;
+        Font font = new Font("Monospaced", Font.PLAIN, curr_font_size);
+        statusMsgPane.setFont(font);
+
+        JPanel statusMsgPanel = UIUtils.createSearchableTitledPanel("Status Messages", statusMsgPane, new FindBar(statusMsgPane.getSearchable()));
+        return statusMsgPanel;
+    }
 
     /**
      * Helper method for starting monitors for sim status as well as health status.
