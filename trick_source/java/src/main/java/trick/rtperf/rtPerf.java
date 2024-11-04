@@ -567,6 +567,40 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             simOverrunPanel.validate();
         }
     }
+
+    /**
+     * Convenient method for adding Sim run dir and over run fields to the
+     * corresponding panel.
+     */
+    private void addFieldsToSimOverrunPanel(JXTitledPanel titledPanel) {
+    	JPanel panel = new JPanel();
+    	panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+    	
+        JPanel simRunPanel = new JPanel();
+        simRunPanel.setLayout(new BoxLayout(simRunPanel, BoxLayout.Y_AXIS));
+
+        JPanel overRunPanel = new JPanel();
+        overRunPanel.setLayout(new BoxLayout(overRunPanel, BoxLayout.Y_AXIS));
+
+        if (simRunDirField == null) {
+            simRunDirField = new JTextField[1];
+            overrunField = new JTextField[1];
+            for (int ii = 0; ii < simRunDirField.length; ii++) {
+                simRunDirField[ii] = new JTextField();
+                overrunField[ii] = new JTextField();
+            }
+        }
+
+        for (int i = 0; i < simRunDirField.length; i++) {
+            simRunPanel.add(simRunDirField[i]);
+            overRunPanel.add(overrunField[i]);
+        }
+        
+        panel.add(simRunPanel);
+        panel.add(overRunPanel);
+
+        titledPanel.add(panel, BorderLayout.CENTER);
+    }
     
     /**
      * Inner class for the task of monitoring health status.
