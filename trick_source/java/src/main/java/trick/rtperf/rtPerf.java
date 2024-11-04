@@ -569,6 +569,85 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     }
 
     /**
+     * Updates the GUI as needed if SIM states are changed.
+     */
+    private void updateGUI() {
+        String newStatusDesc = SimState.SIM_MODE_DESCRIPTION[simState.getMode()];
+
+        recTime.setText(simState.getTwoFractionFormatted(simState.getExecOutTime()));
+
+        if (simState.getRealtimeActive() == 1) {
+        	if (realtimeButton.getText().equals("RealTime Off")) {
+        		realtimeButton.setSelected(true);
+        		realtimeButton.setText("RealTime On");
+        		getAction("stepSim").setEnabled(true);
+        	}
+        } else {
+        	if (realtimeButton.getText().equals("RealTime On")) {
+        		realtimeButton.setSelected(false);
+        		realtimeButton.setText("RealTime Off");
+        		getAction("stepSim").setEnabled(false);
+        	}
+        }
+
+        simRealtimeRatio.setText(simState.getTwoFractionFormatted(simState.getSimRealtimeRatio()));
+
+        // Track Master sim overruns
+        overrunField[0].setText(Integer.toString(simState.getOverruns()));
+        if ( simState.getOverruns() > 0 ) {
+            overrunField[0].setForeground(new Color(205, 0, 0));  // red3
+        } else {
+            overrunField[0].setForeground(Color.getColor("#000000"));
+        }
+        simOverrunPanel.revalidate();
+
+        // Update the GUI when that status is changed.
+        if ( !newStatusDesc.equals(currentSimStatusDesc) ) {
+
+            switch ( simState.getMode() ) {
+
+                case SimState.INITIALIZATION_MODE:
+                    enableAllCommands();
+                    setActionsEnabled("startSim,freezeSim,recordingSim,realtime,quit", false);
+                    logoImagePanel.resume();
+                    break;
+
+                case SimState.FREEZE_MODE:
+                    if ( currentSimStatusDesc.equals("PreCheckpoint") ) {
+                        ;/* Skip a cycle so the checkpoint status has time to display briefly */
+                    } else {
+                        enableAllCommands();
+                        setActionsEnabled("freezeSim,quit", false);
+                    }
+                    logoImagePanel.pause();
+                    break;
+
+                case SimState.DEBUG_STEPPING_MODE:
+                case SimState.RUN_MODE:
+                    disableAllCommands();
+                    setActionsEnabled("freezeSim,lite", true);
+                    if (debug_flag != 0) {
+                        setActionsEnabled("stepSim,dumpChkpntASCII", true);
+                    }
+                    logoImagePanel.resume();
+                    break;
+
+                case SimState.EXIT_MODE:
+                case SimState.COMPLETE_MODE:
+                    disableAllCommands();
+                    setActionsEnabled( "lite,quit", true );
+                    statusLabel.setText("Done");
+                    statusLabel.setEnabled(false);
+                    logoImagePanel.stop();
+                    break;
+            }
+
+            runtimeStatePanel.setTitle(newStatusDesc);
+            currentSimStatusDesc = runtimeStatePanel.getTitle();
+        }
+    }
+
+    /**
      * Convenient method for adding Sim run dir and over run fields to the
      * corresponding panel.
      */
