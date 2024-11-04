@@ -277,6 +277,8 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
             simState.setRunPath(simRunDir);
 
+            // MODIFY ALL THE STUFF BELOW TO GET THE RELEVANT INFORMATION FOR THE USE CASE. This is also where I need to change the GUI display.
+            
             for (int i = 1; i < simRunDirField.length; i++) {
             	/**
             	 * Commented out the following code as slaves is a vector and can't be accessed at this point.
@@ -312,6 +314,9 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                 message_port = Integer.parseInt(results[1]) ;
 
             }
+
+            // Modify the GUI here.
+
             // If simOverrunPanel is already created, meaning the GUI was setup without connecting to the server.
             // Now, the user hits the Connect button to connect. Therefore, we need to update this panel once
             // it gets connected.
@@ -327,6 +332,48 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         }
         catch (NullPointerException npe) {
             npe.printStackTrace();
+        }
+    }
+
+    /**
+     * Adds all the variables to variable server for getting SIM states.
+     */
+    private void scheduleGetSimState() {
+        try {
+            statusSimcom = new VariableServerConnection(host, port);
+            statusSimcom.put("trick.var_set_client_tag(\"SimControl2\")\n");
+
+            // whenever there is data in statusSimcom socket, do something
+            String status_vars ;
+
+            status_vars = "trick.var_add(\"trick_sys.sched.time_tics\") \n" +
+                          "trick.var_add(\"trick_sys.sched.mode\") \n" +
+                          "trick.var_add(\"trick_real_time.rt_sync.actual_run_ratio\") \n" +
+                          "trick.var_add(\"trick_real_time.rt_sync.active\") \n";
+
+            if ( debug_present != 0 ) {
+                status_vars += "trick.var_add(\"trick_instruments.debug_pause.debug_pause_flag\")\n" ;
+            }
+            if ( overrun_present != 0 ) {
+                status_vars += "trick.var_add(\"trick_real_time.rt_sync.total_overrun\")\n" ;
+            }
+            statusSimcom.put(status_vars) ;
+
+            statusSimcom.put("trick.var_cycle(0.25)\n");
+
+            getAction("connect").setEnabled(false);         
+            runningSimList.setEnabled(false);
+        }
+        catch (NumberFormatException nfe) {
+
+        }
+        catch (IOException e) {
+            statusLabel.setText("Not Ready");
+            statusLabel.setEnabled(false);
+            statusSimcom = null;
+            getAction("connect").setEnabled(true);           
+            runningSimList.setEnabled(true);
+            getAction("startSim").setEnabled(false);
         }
     }
 
