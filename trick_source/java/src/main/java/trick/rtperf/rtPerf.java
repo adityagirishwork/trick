@@ -689,6 +689,24 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         }
     }
 
+    // Ask why we need both of these functions since if I only have the one above I get this error "incompatible types: java.lang.String[] cannot be converted to java.lang.String"
+
+    /**
+     * Convenient method for setting the state of specified actions.
+     *
+     * @param acts        The array of all the actions.
+     * @param flag        The state is set to for the actions.
+     */
+    private void setActionsEnabled(String[] acts, boolean flag) {
+        if (acts != null) {
+            for (int i = 0; i < acts.length; i++) {
+                if (getAction(acts[i].trim()) != null) {
+                    getAction(acts[i].trim()).setEnabled(flag);
+                }
+            }
+        }
+    }
+
     /**
      * Convenient method for adding Sim run dir and over run fields to the
      * corresponding panel.
