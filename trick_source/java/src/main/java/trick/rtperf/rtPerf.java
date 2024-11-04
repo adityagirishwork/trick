@@ -176,6 +176,18 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 		}
 	}
 
+    /**
+     * Helper method for starting monitors for sim status as well as health status.
+     */
+	private void startStatusMonitors() {
+		MonitorSimStatusTask monitorSimStatusTask = new MonitorSimStatusTask(this);
+        monitorSimStatusTask.addPropertyChangeListener(this);
+        getContext().getTaskService().execute(monitorSimStatusTask);
+
+        // For receiving hs messages.
+        getContext().getTaskService().execute(new MonitorHealthStatusTask(this));
+	}
+
     //========================================
     //    Set/Get methods
     //========================================
