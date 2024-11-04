@@ -50,28 +50,84 @@ import org.jdesktop.swingx.JXTitledSeparator;
 
 public class rtPerf extends TrickApplication implements PropertyChangeListener {
     
-    private int modeindex = -1;
-    private int debug_flag;
-    private int debug_present;
-    private int message_present;
-    private int message_port;
-    private static boolean isAutoExitOn; // Checks whether to automatically exit the simulation when it is done/killed.
+    //========================================
+    //    Public data
+    //========================================
 
-    private JXTitledPanel runtimeStatePanel; // The panel that displays the current sim state description as well as progress.
+
+    //========================================
+    //    Protected data
+    //========================================
+
+
+    //========================================
+    //    Private Data
+    //========================================
+    private int modeIndex = -1;
+    private int debug_flag ;
+    private int debug_present ;
+    private int overrun_present ;
+    private int message_present ;
+    private int message_port ;
+    
+    /** whether automatically exit when sim is done/killed. */
+    private static boolean isAutoExitOn;
+
+    // The panel that displays the current sim state description as well as progress.
+    private JXTitledPanel runtimeStatePanel;
     private String currentSimStatusDesc = "None";
     private JProgressBar progressBar;
-    private boolean enableProgressBar = true; // Always enable progress bar unless the sim termination time is not defined
+    // Always enable progress bar unless the sim termination time is not defined
+    private boolean enableProgressBar = true;
 
-    private VariableServerConnection commandSimcom; // VariableServerConnection for sending and receiving variable server commands.
-    private VariableServerConnection statusSimcom; // Variable Server Connection for received the simulation state from the variable server.
-    private SocketChannel healthStatusSocketChannel; // Socket for receiving health and status messages.
+    private JTextField recTime;
+    //private JTextField realtimeTime;
+    //private JTextField metTime;
+    //private JTextField gmtTime;
+    private JTextField simRealtimeRatio;
 
+    private JXTitledPanel simOverrunPanel;
+    private JTextField[] simRunDirField;
+    private JTextField[] overrunField;
+    private int slaveCount;
+    private double simStartTime;
+    private double simStopTime;
+    private double execTimeTicValue;
+
+    private JToggleButton dataRecButton;
+    private JToggleButton realtimeButton;
+    private JToggleButton dumpChkpntASCIIButton;
+    private JToggleButton loadChkpntButton;
+    private JToggleButton liteButton;
+
+    private JXEditorPane statusMsgPane;
+
+    private JXLabel statusLabel;
+
+    /*
+     *  The action controller that performs actions for such as clicking button, selection a menu item and etc.
+     */
+    private SimControlActionController actionController;
+
+    // The animation image player panel
+    private AnimationPlayer logoImagePanel;
+
+    // VariableServerConnection for sending/receiving Variable Server commands.
+    private VariableServerConnection commandSimcom;
+    // VariableServerConnection for receiving Sim state from Variable Server.
+    private VariableServerConnection statusSimcom;
+
+    // Socket for receiving health and status messages
+    private SocketChannel healthStatusSocketChannel ;
+   
     private JComboBox runningSimList;
     private static String host;
     private static int port = -1;
     private static boolean isRestartOptionOn;
-    private boolean errOnInitConnect = false; // True if an error was encountered during the attempt to connect to Variable Server during intialize()
-    private int varServerTimeout = 5000; // Time out when attempting to establish connection with Variable Server in milliseconds
+    //True if an error was encountered during the attempt to connect to Variable Server during intialize()
+    private boolean errOnInitConnect = false;
+    //Time out when attempting to establish connection with Variable Server in milliseconds
+    private int varServerTimeout = 5000;
     
     // The object of SimState that has Sim state data.
     private SimState simState;
@@ -84,6 +140,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
 	final private Dimension FULL_SIZE = new Dimension(680, 640);
 	final private Dimension LITE_SIZE = new Dimension(340, 360);
+
 
     @Action
     public void startRT() {
