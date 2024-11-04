@@ -677,6 +677,19 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     }
 
     /**
+     * Convenient method for setting the state of specified actions.
+     *
+     * @param actsStr    All actions that need setting state. Each action is separated by ",".
+     * @param flag        The state is set to for the actions.
+     */
+    private void setActionsEnabled(String actsStr, boolean flag) {
+        if (actsStr != null) {
+            String[] acts = actsStr.split(",");
+            setActionsEnabled(acts, flag);
+        }
+    }
+
+    /**
      * Convenient method for adding Sim run dir and over run fields to the
      * corresponding panel.
      */
