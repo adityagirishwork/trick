@@ -18,6 +18,10 @@ import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.event.*;
 // import javax.xml.ws.Action;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Style;
+import javax.swing.text.StyleContext;
 
 import trick.common.utils.VariableServerConnection;
 import trick.common.TrickApplication;
@@ -137,6 +141,38 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
         startStatusMonitors();
     }
+
+    /**
+	 * Prints an error message to the status message pane. In the event there is an error with it, a JOptionPane will pop up.
+	 * @param err
+	 */
+	protected void printErrorMessage(String err) {
+		try {
+			// Get the document attached to the Status Message Pane 
+			Document doc = statusMsgPane.getDocument();
+
+			// Set the font color to red and the background to black
+			StyleContext sc = new StyleContext();               
+			Style redStyle = sc.addStyle("Red", null);
+			setColorStyleAttr(redStyle, Color.red, Color.black);
+
+			// Add the error message to the bottom of the message pane
+			doc.insertString(doc.getLength(), err + "\n", redStyle);
+
+			// If Lite mode is engaged, or the window is small enough 
+			// to obscure the message pane, create a popup for the error as well.
+			if (liteButton.isSelected() || getMainFrame().getSize().height <= LITE_SIZE.height + 50) {
+				JOptionPane.showMessageDialog(getMainFrame(), err, "Sim Control Panel Error", JOptionPane.ERROR_MESSAGE);
+			}
+		} catch (BadLocationException ble) {
+			JOptionPane.showMessageDialog(getMainFrame(), 
+										  "Status Message Pane had an issue when printing: " + err, 
+										  "Status Message Pane Error", 
+										  JOptionPane.ERROR_MESSAGE);
+		} catch (NullPointerException npe) {
+			System.err.println( "Sim Control Error at Initialization: \n" + err);
+		}
+	}
 
     public static void main(String[] args) {
         Application.launch(rtPerf.class, args);
