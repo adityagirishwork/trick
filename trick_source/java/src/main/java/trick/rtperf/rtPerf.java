@@ -24,6 +24,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.Document;
 import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
 import javax.swing.text.StyleContext;
 import javax.swing.text.StyledEditorKit;
 
@@ -201,6 +202,15 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         scheduleGetSimState();
 
         startStatusMonitors();
+    }
+
+    /**
+     * Helper method for setting style attribute.
+     */
+    private void setColorStyleAttr(Style st, Color foreground, Color background) {
+        st.addAttribute(StyleConstants.Foreground, foreground);
+        st.addAttribute(StyleConstants.Background, background);
+        st.addAttribute(StyleConstants.Alignment, StyleConstants.ALIGN_LEFT);
     }
 
     /**
