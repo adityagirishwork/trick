@@ -257,6 +257,168 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 	}
 
     /**
+     * Creates the panel for showing the sim running progress as well as its status text.
+     */
+    private JPanel createRuntimeStatePanel() {
+        JXTitledPanel titledPanel = new JXTitledPanel();
+        titledPanel.setBorder(BorderFactory.createTitledBorder(""));
+        titledPanel.setTitle("Initial");
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setValue(0);
+        progressBar.setStringPainted(true);
+        titledPanel.add(progressBar, BorderLayout.CENTER);
+        progressBar.setEnabled(enableProgressBar);
+        return titledPanel;
+    }
+
+    /**
+     * Creates the panel for holding all the command buttons.
+     */
+    private JPanel createCommandsPanel() {
+    	JXTitledPanel titledCommandsPanel = new JXTitledPanel();
+    	titledCommandsPanel.setBorder(BorderFactory.createEmptyBorder(5,10,10,10));
+    	titledCommandsPanel.setTitle("Commands");
+        JXPanel commandsPanel = new JXPanel();
+        titledCommandsPanel.setContentContainer(commandsPanel);
+        
+        // 2 columns and 5 rows, each component has the same width and height.
+        GridLayout gridLayout = new GridLayout(5,2,2,4);
+        
+        commandsPanel.setLayout(gridLayout);
+
+        commandsPanel.add(new JButton(getAction("stepSim")));
+
+        dataRecButton = new JToggleButton(getAction("recordingSim"));
+        dataRecButton.setToolTipText("Data Recording On/Off");
+        // By default, Data Recording is On.
+        dataRecButton.setSelected(true);
+
+        dataRecButton.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent evt) {
+                if (evt.getStateChange() == ItemEvent.SELECTED) {                   
+                    dataRecButton.setText("Data Rec On");
+                } else {                    
+                     dataRecButton.setText("Data Rec Off");                  
+                }
+            }
+        });
+
+        realtimeButton = new JToggleButton(getAction("realtime"));
+        realtimeButton.setSelected(true);
+        
+        commandsPanel.add(dataRecButton);
+        commandsPanel.add(new JButton(getAction("startSim")));
+        commandsPanel.add(realtimeButton);
+        commandsPanel.add(new JButton(getAction("freezeSim")));
+
+        dumpChkpntASCIIButton = new JToggleButton(getAction("dumpChkpntASCII"));
+        commandsPanel.add(dumpChkpntASCIIButton);
+
+        commandsPanel.add(new JButton(getAction("shutdownSim")));
+
+        loadChkpntButton = new JToggleButton(getAction("loadChkpnt"));
+        commandsPanel.add(loadChkpntButton);
+
+        liteButton = new JToggleButton(getAction("lite"));
+        liteButton.setSelected(false);
+        liteButton.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent evt) {
+                if (evt.getStateChange() == ItemEvent.SELECTED) {
+                	liteButton.setText("Full");
+                } else {
+                	liteButton.setText("Lite");
+                }
+            }
+        });
+
+        commandsPanel.add(liteButton);
+
+        commandsPanel.add(new JButton(getAction("quit")));
+
+        return titledCommandsPanel;
+    }
+
+    /**
+     * Creates the panel for all the time display.
+     */
+    private JPanel createTimePanel() {
+        JXTitledPanel titledTimePanel = new JXTitledPanel();
+        titledTimePanel.setBorder(BorderFactory.createEmptyBorder(5,10,10,10));
+
+        titledTimePanel.setTitle("Time");
+        JXPanel timePanel = new JXPanel();
+        titledTimePanel.setContentContainer(timePanel);
+
+        // 1 column and 4 rows, each component has the same width and height.
+        GridLayout gridLayout = new GridLayout(4,1,2,6);
+
+        timePanel.setLayout(gridLayout);
+
+        JXLabel recLabel = new JXLabel("RET (sec)");
+        timePanel.add(recLabel);
+
+        recTime = new JTextField("0.00");
+        recTime.setEditable(false);
+        timePanel.add(recTime);
+
+        // extra spaces are for when look and feel is changed to have enough spaces
+        timePanel.add(new JXLabel("Sim / Real Time"));
+
+        simRealtimeRatio = new JTextField("0.00");
+        //simRealtimeRatio.setPreferredSize(simRealtimeRatio.getMinimumSize());
+        simRealtimeRatio.setEditable(false);
+        timePanel.add(simRealtimeRatio);
+
+        return titledTimePanel;
+    }
+
+    /**
+     * Creates the panel for displaying the sim run and overruns information.
+     */
+    private JPanel createSimOverrunPanel() {
+        JXTitledPanel titledPanel = new JXTitledPanel();
+        titledPanel.setBorder(BorderFactory.createTitledBorder(""));
+        titledPanel.setTitle("Simulations/Overruns");
+
+        addFieldsToSimOverrunPanel(titledPanel);
+        return titledPanel;
+    }
+
+    /**
+     * Convenient method for adding Sim run dir and over run fields to the
+     * corresponding panel.
+     */
+    private void addFieldsToSimOverrunPanel(JXTitledPanel titledPanel) {
+    	JPanel panel = new JPanel();
+    	panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+    	
+        JPanel simRunPanel = new JPanel();
+        simRunPanel.setLayout(new BoxLayout(simRunPanel, BoxLayout.Y_AXIS));
+
+        JPanel overRunPanel = new JPanel();
+        overRunPanel.setLayout(new BoxLayout(overRunPanel, BoxLayout.Y_AXIS));
+
+        if (simRunDirField == null) {
+            simRunDirField = new JTextField[1];
+            overrunField = new JTextField[1];
+            for (int ii = 0; ii < simRunDirField.length; ii++) {
+                simRunDirField[ii] = new JTextField();
+                overrunField[ii] = new JTextField();
+            }
+        }
+
+        for (int i = 0; i < simRunDirField.length; i++) {
+            simRunPanel.add(simRunDirField[i]);
+            overRunPanel.add(overrunField[i]);
+        }
+        
+        panel.add(simRunPanel);
+        panel.add(overRunPanel);
+
+        titledPanel.add(panel, BorderLayout.CENTER);
+    }
+    
+    /**
      * Creates the panel for displaying the sim health status messages.
      */
     private JPanel createStatusMsgPanel() {
