@@ -4,6 +4,7 @@ package trick.rtperf;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.lang.Math;
@@ -444,6 +445,21 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         }
     }
 
+    //========================================
+    //    Methods
+    //========================================
+    /**
+     * Invoked when SimStatusMonitor task's progress property changes.
+     * This is required by {@link PropertyChangeListener}.
+     */
+    public void propertyChange(PropertyChangeEvent evt) {
+        if ("progress" == evt.getPropertyName()) {
+          int progress = (Integer) evt.getNewValue();
+          progressBar.setValue(progress);
+        }
+
+    }
+
     /**
      * Adds all the variables to variable server for getting SIM states.
      */
@@ -705,6 +721,54 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                 }
             }
         }
+    }
+
+    /**
+     * Creates the main panel for this application.
+     */
+    @Override
+	protected JComponent createMainPanel() {
+        GridBagConstraints gridBagConstraints = new GridBagConstraints();
+
+        JXPanel litePanel = new JXPanel();
+        litePanel.setLayout(new java.awt.GridBagLayout());
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTH;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.weightx = 0.5;
+        gridBagConstraints.weighty = 0.1;
+        runtiagConstraints.gridx = 1;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridwidth= 1;
+        JPanel timePanel = createTimePanel();
+        litePanel.add(timePanel, gridBagConstraints);
+
+        // default trick logo
+        String trickLogoName = resourceMap.getString("trick.logo");
+
+        // user defined trick logo as specified by TRICK_LOGO, use it if it exists.
+        if (UIUtils.getTrickLogo() != null && (new File(UIUtils.getTrickLogo())).exists()) {
+        	trickLogoName = UIUtils.getTrickLogo();
+        }
+
+        logoImagePanel = new AnimationPlayer(trickLogoName);
+        logoImagePanel.setToolTipText("Trick Version " + UIUtils.getTrickVersion());
+
+        JSplitPane topPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, litePanel, logoImagePanel);
+        topPane.setBorder(null);
+
+        JXPanel bottomPanel = new JXPanel();
+        bottomPanel.setLayout(new java.awt.BorderLayout());
+        simOverrunPanel = (JXTitledPanel)createSimOverrunPanel();
+        bottomPanel.add(simOverrunPanel, BorderLayout.NORTH);
+        bottomPanel.add(createStatusMsgPanel(), BorderLayout.CENTER);
+
+        JSplitPane mainPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topPane, bottomPanel);
+        mainPane.setPreferredSize(new Dimension(800, 600));
+
+        return mainPane;
     }
 
     /**
