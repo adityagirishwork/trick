@@ -739,7 +739,17 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.weightx = 0.5;
         gridBagConstraints.weighty = 0.1;
-        runtiagConstraints.gridx = 1;
+        runtimeStatePanel = (JXTitledPanel)createRuntimeStatePanel();
+        litePanel.add(runtimeStatePanel, gridBagConstraints);
+
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 1;
+
+        gridBagConstraints.gridwidth = 1;
+        JPanel commandsPanel = createCommandsPanel();
+        litePanel.add(commandsPanel, gridBagConstraints);
+
+        gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.gridwidth= 1;
         JPanel timePanel = createTimePanel();
