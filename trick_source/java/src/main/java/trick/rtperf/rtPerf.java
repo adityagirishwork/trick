@@ -395,6 +395,8 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         st.addAttribute(StyleConstants.Alignment, StyleConstants.ALIGN_LEFT);
     }
 
+    
+
     /**
 	 * Prints an error message to the status message pane. In the event there is an error with it, a JOptionPane will pop up.
 	 * @param err
@@ -588,6 +590,157 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
           progressBar.setValue(progress);
         }
 
+    }
+
+    /**
+     * Cleans up the socket communication before exiting the application.
+     */
+    @Override
+    protected void shutdown() {
+        super.shutdown();
+        try {
+            if (commandSimcom != null) {
+                commandSimcom.close();
+            }
+            if (statusSimcom != null) {
+                statusSimcom.close();
+            }
+            if (healthStatusSocketChannel != null) {
+            healthStatusSocketChannel.close() ;
+            }
+        }
+        catch (java.io.IOException ioe) {
+        }
+    }
+
+    /**
+     * Makes initialization as needed. This is called before startup().
+     *
+     * @see #startup
+     */
+    @Override
+    protected void initialize(String[] args) {
+        super.initialize(args);
+        actionController = new SimControlActionController();
+
+        getInitializationPacket();
+    }
+
+    /**
+     * Starts things such as establishing socket communication, and starting monitor tasks.
+     * This is called after startup.
+     *
+     * @see #initialize
+     * @see #startup
+     */
+    @Override
+    protected void ready() {
+    	super.ready();
+
+    	logoImagePanel.start();
+
+    	// The following code was commented out and moved to the end of startup()
+    	// due to framework having issues with certain Java versions. In certain Java
+    	// version such as JDK1.6.0_20, ready() never gets called???
+    	// 05-24-2011, found out that if there was any SwingTask or Thread started
+    	// before ready() in application framework, JDK1.6.0_20 would fail to realize
+    	// the startup() is done. That's why ready() never gets called even though startup()
+    	// is done. So modified the code to start the logo animation player after startup()
+    	// and moved the following code back to where it should be.
+        if (commandSimcom == null) {
+        	logoImagePanel.pause();
+            Object[] keys = actionMap.allKeys();
+            // If there is no server connection, disable all actions except connect and quit.
+            for (int i = 0; i < keys.length; i++) {
+                String theKey = (String)keys[i];
+                if (!(theKey.equals("connect") || theKey.equals("quit"))) {
+                    getAction(theKey).setEnabled(false);
+                }
+            }
+            String errMsg = "No server connection. Please connect!";
+			printErrorMessage(errMsg);
+            return;
+        }
+        
+        if (isRestartOptionOn) {
+        	printSendHS();
+        }
+        
+        scheduleGetSimState();
+
+        startStatusMonitors();
+    }
+
+    /**
+     * Starts building GUI. This is called after initialize.
+     * Once startup() is done, ready() is called.
+     *
+     * @see #initialize
+     * @see #ready
+     */
+    @Override
+    protected void startup() {
+        super.startup();
+
+        // dont't want to the confirmation dialog for sim control panel
+    	removeExitListener(exitListener);
+
+        View view = getMainView();
+        view.setComponent(createMainPanel());
+        view.setMenuBar(createMenuBar());
+        view.setToolBar(createToolBar());
+        view.setStatusBar(createStatusBar());
+
+        if(errOnInitConnect && (runningSimList != null) ) {
+            runningSimList.addItem("localhost : " + port);  
+        } 
+
+        show(view);
+    }
+
+    /**
+     * Helper method to print the send_hs file to the statusMsgPane.
+     */
+    private void printSendHS() {
+    	if (simState != null) {
+    		File sendHS = new File(simState.getRunPath() + java.io.File.separator + "send_hs");
+    		if (!sendHS.exists()) {
+    			return;
+    		}
+    		
+    		String lineText = null;
+    		
+    		Document doc = statusMsgPane.getDocument();
+            StyleContext sc = new StyleContext();
+            
+            // normal style is white on black
+            Style defaultStyle = sc.addStyle("Default", null);
+            setColorStyleAttr(defaultStyle, Color.white, Color.black);
+            
+            BufferedReader reader = null;
+    		try {   			
+    			reader = new BufferedReader(new FileReader(sendHS));
+    			while ((lineText = reader.readLine()) != null) {
+    				doc.insertString(doc.getLength(), lineText+System.getProperty("line.separator"), defaultStyle);
+    			}   				
+    		} catch (FileNotFoundException fnfe) {
+    			// do nothing
+    		} catch (IOException ioe) {
+    			// do nothing
+    		} catch (BadLocationException ble) {
+    			// do nothing
+    		}
+    		
+    		finally {
+    			try {
+    				if (reader != null) {
+    					reader.close();
+    				}
+    			} catch (IOException ioe) {
+    				
+    			}
+    		}
+    	}
     }
 
     /**
