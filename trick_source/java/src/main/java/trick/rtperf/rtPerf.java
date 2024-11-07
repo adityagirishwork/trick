@@ -1,36 +1,68 @@
+//========================================
+//    Package
+//========================================
 package trick.rtperf;
 
-// Imports
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
+//========================================
+//    Imports
+//========================================
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.Desktop;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.*;
-import java.lang.Math;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.util.*;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.*;
-import javax.swing.event.*;
-// import javax.xml.ws.Action;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JMenuBar;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.SwingConstants;
+import javax.swing.SwingWorker;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.Document;
@@ -38,16 +70,6 @@ import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyleContext;
 import javax.swing.text.StyledEditorKit;
-
-import trick.common.utils.VariableServerConnection;
-import trick.common.TrickApplication;
-import trick.common.ui.UIUtils;
-import trick.common.ui.components.FontChooser;
-import trick.common.ui.panels.AnimationPlayer;
-import trick.common.ui.panels.FindBar;
-import trick.simcontrol.SimControlApplication;
-import trick.simcontrol.utils.SimControlActionController;
-import trick.simcontrol.utils.SimState;
 
 import org.jdesktop.application.Action;
 import org.jdesktop.application.Application;
@@ -59,6 +81,15 @@ import org.jdesktop.swingx.JXPanel;
 import org.jdesktop.swingx.JXStatusBar;
 import org.jdesktop.swingx.JXTitledPanel;
 import org.jdesktop.swingx.JXTitledSeparator;
+
+import trick.common.TrickApplication;
+import trick.common.ui.UIUtils;
+import trick.common.ui.components.FontChooser;
+import trick.common.ui.panels.AnimationPlayer;
+import trick.common.ui.panels.FindBar;
+import trick.common.utils.VariableServerConnection;
+import trick.simcontrol.utils.SimControlActionController;
+import trick.simcontrol.utils.SimState;
 
 public class rtPerf extends TrickApplication implements PropertyChangeListener {
     
@@ -284,7 +315,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             masterslave_enabled = results[1].equals("1");
 
             // Sends commands to the variable server to add several variables for retrieving simulation details.
-            commandSimcom.put("trick.var_set_client_tag(\"SimControl\")\n");
+            commandSimcom.put("trick.var_set_client_tag(\"rtPerf\")\n");
             commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\") \n" +
             		          "trick.var_add(\"trick_frame_log.frame_log.job_trick_id\") \n" +
                               "trick.var_add(\"frame_log.frame_log.job_user_id\") \n");
@@ -386,6 +417,21 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         }
     }
 
+    //========================================
+    //    Methods
+    //========================================
+    /**
+     * Invoked when SimStatusMonitor task's progress property changes.
+     * This is required by {@link PropertyChangeListener}.
+     */
+    public void propertyChange(PropertyChangeEvent evt) {
+        if ("progress" == evt.getPropertyName()) {
+          int progress = (Integer) evt.getNewValue();
+          progressBar.setValue(progress);
+        }
+
+    }
+    
     /**
      * Helper method for setting style attribute.
      */
@@ -574,22 +620,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
         JPanel statusMsgPanel = UIUtils.createSearchableTitledPanel("Status Messages", statusMsgPane, new FindBar(statusMsgPane.getSearchable()));
         return statusMsgPanel;
-    }
-
-
-    //========================================
-    //    Methods
-    //========================================
-    /**
-     * Invoked when SimStatusMonitor task's progress property changes.
-     * This is required by {@link PropertyChangeListener}.
-     */
-    public void propertyChange(PropertyChangeEvent evt) {
-        if ("progress" == evt.getPropertyName()) {
-          int progress = (Integer) evt.getNewValue();
-          progressBar.setValue(progress);
-        }
-
     }
 
     /**
