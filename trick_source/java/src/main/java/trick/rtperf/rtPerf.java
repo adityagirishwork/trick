@@ -153,7 +153,10 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 	final private Dimension FULL_SIZE = new Dimension(680, 640);
 	final private Dimension LITE_SIZE = new Dimension(340, 360);
 
-
+    //========================================
+    //    Actions
+    //========================================
+    
     @Action
     public void startRT() {
         launchTrickApplication("rtperf", "--host " + host + " --port " + port);
@@ -238,7 +241,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         String[] results = null;      
         boolean masterslave_enabled;
         try {
-			String errMsg = "Error: SimControlApplication:getInitializationPacket()";
+			String errMsg = "Error: RealTimePerformanceApplication:getInitializationPacket()";
             try {
             	if (host != null && port != -1) {
             		commandSimcom = new VariableServerConnection(host, port, varServerTimeout);
@@ -280,14 +283,11 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             results = commandSimcom.get().split("\t");
             masterslave_enabled = results[1].equals("1");
 
+            // Sends commands to the variable server to add several variables for retrieving simulation details.
             commandSimcom.put("trick.var_set_client_tag(\"SimControl\")\n");
-            commandSimcom.put("trick.var_add(\"trick_sys.sched.sim_start\") \n" +
-            		          "trick.var_add(\"trick_sys.sched.terminate_time\") \n" +
-                              "trick.var_add(\"trick_sys.sched.time_tic_value\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.default_dir\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.cmdline_name\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.input_file\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.run_dir\") \n");
+            commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\") \n" +
+            		          "trick.var_add(\"trick_frame_log.frame_log.job_trick_id\") \n" +
+                              "trick.var_add(\"frame_log.frame_log.job_user_id\") \n");
             
             if (masterslave_enabled) {
                 commandSimcom.put("trick.var_add(\"trick_master_slave.master.num_slaves\") \n");
