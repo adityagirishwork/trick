@@ -216,6 +216,177 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     }
 
     /**
+     * Helper method for starting monitors for sim status as well as health status.
+     */
+	private void startStatusMonitors() {
+		MonitorSimStatusTask monitorSimStatusTask = new MonitorSimStatusTask(this);
+        monitorSimStatusTask.addPropertyChangeListener(this);
+        getContext().getTaskService().execute(monitorSimStatusTask);
+
+        // For receiving hs messages.
+        getContext().getTaskService().execute(new MonitorHealthStatusTask(this));
+	}
+
+    //========================================
+    //    Set/Get methods
+    //========================================
+    /**
+     * Gets the initialization packet from Variable Server if it is up.
+     */
+    public void getInitializationPacket() {    	
+        String simRunDir = null;
+        String[] results = null;      
+        boolean masterslave_enabled;
+        try {
+			String errMsg = "Error: SimControlApplication:getInitializationPacket()";
+            try {
+            	if (host != null && port != -1) {
+            		commandSimcom = new VariableServerConnection(host, port, varServerTimeout);
+            	} else {
+            		commandSimcom = null;
+            	}
+            } catch (UnknownHostException host_exception) {
+                /** The IP address of the host could not be determined. */
+                errMsg += "\n Unknown host \""+host+"\"";
+                errMsg += "\n Please use a valid host name (e.g. localhost)";
+                errOnInitConnect = true;   
+		printErrorMessage(errMsg); 
+            } catch (SocketTimeoutException ste) {
+                /** Connection attempt timed out. */
+                errMsg += "\n Connection Timeout \""+host+"\"";
+                errMsg += "\n Please try a different host name (e.g. localhost)";
+                errOnInitConnect = true;
+                printErrorMessage(errMsg);           
+            } catch (IOException ioe) {
+                /** Port number is unavailable, or there is no connection, etc. */
+                errMsg += "\n Invalid TCP/IP port number \""+port+"\"";
+                errMsg += "\n Please check the server and enter a proper port number!";
+                errMsg += "\n IOException ..." + ioe;
+                errMsg += "\n If there is no connection, please make sure SIM is up running properly!";
+                errOnInitConnect = true;
+		printErrorMessage(errMsg);
+            } 
+            
+            if (commandSimcom == null) {
+            	(new RetrieveHostPortTask()).execute();
+            	return;
+            }
+                       
+            actionController.setVariableServerConnection(commandSimcom);
+
+            simState = new SimState();
+
+            commandSimcom.put("trick.var_exists(\"trick_master_slave.master.num_slaves\")");
+            results = commandSimcom.get().split("\t");
+            masterslave_enabled = results[1].equals("1");
+
+            commandSimcom.put("trick.var_set_client_tag(\"SimControl\")\n");
+            commandSimcom.put("trick.var_add(\"trick_sys.sched.sim_start\") \n" +
+            		          "trick.var_add(\"trick_sys.sched.terminate_time\") \n" +
+                              "trick.var_add(\"trick_sys.sched.time_tic_value\") \n" +
+                              "trick.var_add(\"trick_cmd_args.cmd_args.default_dir\") \n" +
+                              "trick.var_add(\"trick_cmd_args.cmd_args.cmdline_name\") \n" +
+                              "trick.var_add(\"trick_cmd_args.cmd_args.input_file\") \n" +
+                              "trick.var_add(\"trick_cmd_args.cmd_args.run_dir\") \n");
+            
+            if (masterslave_enabled) {
+                commandSimcom.put("trick.var_add(\"trick_master_slave.master.num_slaves\") \n");
+            }
+
+            commandSimcom.put("trick.var_send() \n" +
+                              "trick.var_clear() \n");
+
+            results = commandSimcom.get().split("\t");
+            if (results != null && results.length > 0) {
+                execTimeTicValue = Double.parseDouble(results[3]);
+                simStartTime = Double.parseDouble(results[1]);
+                long terminateTime = Long.parseLong(results[2]);                
+                if (terminateTime >= Long.MAX_VALUE - 1) {
+                	enableProgressBar = false;
+                }
+                
+                // need to minus the sim start time as it could be a number other than 0.0
+                simStopTime = terminateTime/execTimeTicValue - simStartTime;
+            }
+
+            slaveCount = masterslave_enabled ? Integer.parseInt(results[8]) : 0;
+
+            simRunDirField = new JTextField[slaveCount+1];
+            overrunField = new JTextField[slaveCount+1];
+
+            for (int i = 0; i < simRunDirField.length; i++) {
+                if (i==0) {
+                    simRunDirField[i] = new JTextField(results[4] + java.io.File.separator + results[5] + " " + results[6]);
+                } else {
+                    simRunDirField[i] = new JTextField();
+                }
+                overrunField[i] = new JTextField("    ");
+                overrunField[i].setPreferredSize( new Dimension(60, overrunField[i].getHeight()) );
+            }
+            simRunDir = results[7];
+            simRunDir = results[4] + java.io.File.separator + simRunDir;
+
+            simState.setRunPath(simRunDir);
+
+            // MODIFY ALL THE STUFF BELOW TO GET THE RELEVANT INFORMATION FOR THE USE CASE. This is also where I need to change the GUI display.
+            
+            for (int i = 1; i < simRunDirField.length; i++) {
+            	/**
+            	 * Commented out the following code as slaves is a vector and can't be accessed at this point.
+                 * Uncomment the following code if we can in the future.
+            	 */
+                /*commandSimcom.put("trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].sim_path\") \n" +
+                                 "trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].S_main_name\") \n ");
+                                  "trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].run_input_file\") \n" +
+                                  "trick.sim_serives.var_send( ) \n" +
+                                  "trick.sim_services.var_clear( ) \n");
+                results = commandSimcom.get().split("\t");
+                simRunDirField[i].setText(results[1] + java.io.File.separator + results[2] + " " + results[2]);*/
+            	simRunDirField[i].setText("Slave " + i);
+            }
+            
+            commandSimcom.put("trick.var_exists(\"trick_instruments.debug_pause.debug_pause_flag\")\n") ;
+            results = commandSimcom.get().split("\t");
+            debug_present = Integer.parseInt(results[1]);
+
+            commandSimcom.put("trick.var_exists(\"trick_real_time.rt_sync.total_overrun\")\n") ;
+            results = commandSimcom.get().split("\t");
+            overrun_present = Integer.parseInt(results[1]);
+
+            commandSimcom.put("trick.var_exists(\"trick_message.mdevice.port\")\n") ;
+            results = commandSimcom.get().split("\t");
+            message_present = Integer.parseInt(results[1]);
+
+            if ( message_present == 1 ) {
+                commandSimcom.put("trick.var_add(\"trick_message.mdevice.port\") \n" +
+                                  "trick.var_send() \n" +
+                                  "trick.var_clear() \n");
+                results = commandSimcom.get().split("\t");
+                message_port = Integer.parseInt(results[1]) ;
+
+            }
+
+            // Modify the GUI here.
+
+            // If simOverrunPanel is already created, meaning the GUI was setup without connecting to the server.
+            // Now, the user hits the Connect button to connect. Therefore, we need to update this panel once
+            // it gets connected.
+            if (simOverrunPanel != null) {
+                (new RebuildSimOverrunPanelTask()).execute();
+            }
+        }
+        catch (NumberFormatException nfe) {
+
+        }
+        catch (IOException e) {
+
+        }
+        catch (NullPointerException npe) {
+            npe.printStackTrace();
+        }
+    }
+
+    /**
      * Helper method for setting style attribute.
      */
     private void setColorStyleAttr(Style st, Color foreground, Color background) {
@@ -403,176 +574,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         return statusMsgPanel;
     }
 
-    /**
-     * Helper method for starting monitors for sim status as well as health status.
-     */
-	private void startStatusMonitors() {
-		MonitorSimStatusTask monitorSimStatusTask = new MonitorSimStatusTask(this);
-        monitorSimStatusTask.addPropertyChangeListener(this);
-        getContext().getTaskService().execute(monitorSimStatusTask);
-
-        // For receiving hs messages.
-        getContext().getTaskService().execute(new MonitorHealthStatusTask(this));
-	}
-
-    //========================================
-    //    Set/Get methods
-    //========================================
-    /**
-     * Gets the initialization packet from Variable Server if it is up.
-     */
-    public void getInitializationPacket() {    	
-        String simRunDir = null;
-        String[] results = null;      
-        boolean masterslave_enabled;
-        try {
-			String errMsg = "Error: SimControlApplication:getInitializationPacket()";
-            try {
-            	if (host != null && port != -1) {
-            		commandSimcom = new VariableServerConnection(host, port, varServerTimeout);
-            	} else {
-            		commandSimcom = null;
-            	}
-            } catch (UnknownHostException host_exception) {
-                /** The IP address of the host could not be determined. */
-                errMsg += "\n Unknown host \""+host+"\"";
-                errMsg += "\n Please use a valid host name (e.g. localhost)";
-                errOnInitConnect = true;   
-		printErrorMessage(errMsg); 
-            } catch (SocketTimeoutException ste) {
-                /** Connection attempt timed out. */
-                errMsg += "\n Connection Timeout \""+host+"\"";
-                errMsg += "\n Please try a different host name (e.g. localhost)";
-                errOnInitConnect = true;
-                printErrorMessage(errMsg);           
-            } catch (IOException ioe) {
-                /** Port number is unavailable, or there is no connection, etc. */
-                errMsg += "\n Invalid TCP/IP port number \""+port+"\"";
-                errMsg += "\n Please check the server and enter a proper port number!";
-                errMsg += "\n IOException ..." + ioe;
-                errMsg += "\n If there is no connection, please make sure SIM is up running properly!";
-                errOnInitConnect = true;
-		printErrorMessage(errMsg);
-            } 
-            
-            if (commandSimcom == null) {
-            	(new RetrieveHostPortTask()).execute();
-            	return;
-            }
-                       
-            actionController.setVariableServerConnection(commandSimcom);
-
-            simState = new SimState();
-
-            commandSimcom.put("trick.var_exists(\"trick_master_slave.master.num_slaves\")");
-            results = commandSimcom.get().split("\t");
-            masterslave_enabled = results[1].equals("1");
-
-            commandSimcom.put("trick.var_set_client_tag(\"SimControl\")\n");
-            commandSimcom.put("trick.var_add(\"trick_sys.sched.sim_start\") \n" +
-            		          "trick.var_add(\"trick_sys.sched.terminate_time\") \n" +
-                              "trick.var_add(\"trick_sys.sched.time_tic_value\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.default_dir\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.cmdline_name\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.input_file\") \n" +
-                              "trick.var_add(\"trick_cmd_args.cmd_args.run_dir\") \n");
-            
-            if (masterslave_enabled) {
-                commandSimcom.put("trick.var_add(\"trick_master_slave.master.num_slaves\") \n");
-            }
-
-            commandSimcom.put("trick.var_send() \n" +
-                              "trick.var_clear() \n");
-
-            results = commandSimcom.get().split("\t");
-            if (results != null && results.length > 0) {
-                execTimeTicValue = Double.parseDouble(results[3]);
-                simStartTime = Double.parseDouble(results[1]);
-                long terminateTime = Long.parseLong(results[2]);                
-                if (terminateTime >= Long.MAX_VALUE - 1) {
-                	enableProgressBar = false;
-                }
-                
-                // need to minus the sim start time as it could be a number other than 0.0
-                simStopTime = terminateTime/execTimeTicValue - simStartTime;
-            }
-
-            slaveCount = masterslave_enabled ? Integer.parseInt(results[8]) : 0;
-
-            simRunDirField = new JTextField[slaveCount+1];
-            overrunField = new JTextField[slaveCount+1];
-
-            for (int i = 0; i < simRunDirField.length; i++) {
-                if (i==0) {
-                    simRunDirField[i] = new JTextField(results[4] + java.io.File.separator + results[5] + " " + results[6]);
-                } else {
-                    simRunDirField[i] = new JTextField();
-                }
-                overrunField[i] = new JTextField("    ");
-                overrunField[i].setPreferredSize( new Dimension(60, overrunField[i].getHeight()) );
-            }
-            simRunDir = results[7];
-            simRunDir = results[4] + java.io.File.separator + simRunDir;
-
-            simState.setRunPath(simRunDir);
-
-            // MODIFY ALL THE STUFF BELOW TO GET THE RELEVANT INFORMATION FOR THE USE CASE. This is also where I need to change the GUI display.
-            
-            for (int i = 1; i < simRunDirField.length; i++) {
-            	/**
-            	 * Commented out the following code as slaves is a vector and can't be accessed at this point.
-                 * Uncomment the following code if we can in the future.
-            	 */
-                /*commandSimcom.put("trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].sim_path\") \n" +
-                                 "trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].S_main_name\") \n ");
-                                  "trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].run_input_file\") \n" +
-                                  "trick.sim_serives.var_send( ) \n" +
-                                  "trick.sim_services.var_clear( ) \n");
-                results = commandSimcom.get().split("\t");
-                simRunDirField[i].setText(results[1] + java.io.File.separator + results[2] + " " + results[2]);*/
-            	simRunDirField[i].setText("Slave " + i);
-            }
-            
-            commandSimcom.put("trick.var_exists(\"trick_instruments.debug_pause.debug_pause_flag\")\n") ;
-            results = commandSimcom.get().split("\t");
-            debug_present = Integer.parseInt(results[1]);
-
-            commandSimcom.put("trick.var_exists(\"trick_real_time.rt_sync.total_overrun\")\n") ;
-            results = commandSimcom.get().split("\t");
-            overrun_present = Integer.parseInt(results[1]);
-
-            commandSimcom.put("trick.var_exists(\"trick_message.mdevice.port\")\n") ;
-            results = commandSimcom.get().split("\t");
-            message_present = Integer.parseInt(results[1]);
-
-            if ( message_present == 1 ) {
-                commandSimcom.put("trick.var_add(\"trick_message.mdevice.port\") \n" +
-                                  "trick.var_send() \n" +
-                                  "trick.var_clear() \n");
-                results = commandSimcom.get().split("\t");
-                message_port = Integer.parseInt(results[1]) ;
-
-            }
-
-            // Modify the GUI here.
-
-            // If simOverrunPanel is already created, meaning the GUI was setup without connecting to the server.
-            // Now, the user hits the Connect button to connect. Therefore, we need to update this panel once
-            // it gets connected.
-            if (simOverrunPanel != null) {
-                (new RebuildSimOverrunPanelTask()).execute();
-            }
-        }
-        catch (NumberFormatException nfe) {
-
-        }
-        catch (IOException e) {
-
-        }
-        catch (NullPointerException npe) {
-            npe.printStackTrace();
-        }
-    }
 
     //========================================
     //    Methods
