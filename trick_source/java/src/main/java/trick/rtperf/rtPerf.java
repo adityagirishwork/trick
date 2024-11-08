@@ -53,12 +53,14 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
@@ -90,6 +92,10 @@ import trick.common.ui.panels.FindBar;
 import trick.common.utils.VariableServerConnection;
 import trick.simcontrol.utils.SimControlActionController;
 import trick.simcontrol.utils.SimState;
+
+import org.jfree.chart.*;
+import org.jfree.data.general.DefaultPieDataset;
+
 
 public class rtPerf extends TrickApplication implements PropertyChangeListener {
     
@@ -183,6 +189,13 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
 	final private Dimension FULL_SIZE = new Dimension(680, 640);
 	final private Dimension LITE_SIZE = new Dimension(340, 360);
+
+    private DefaultPieDataset dataset;
+    private JFreeChart chart;
+    private ChartPanel chartPanel;
+    private JPanel mainPanel;
+
+    //private TraceViewOutputToolBar sToolBar;
 
     //========================================
     //    Actions
@@ -431,15 +444,113 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         }
 
     }
-    
+
     /**
-     * Helper method for setting style attribute.
+     * Cleans up the socket communication before exiting the application.
      */
-    private void setColorStyleAttr(Style st, Color foreground, Color background) {
-        st.addAttribute(StyleConstants.Foreground, foreground);
-        st.addAttribute(StyleConstants.Background, background);
-        st.addAttribute(StyleConstants.Alignment, StyleConstants.ALIGN_LEFT);
+    @Override
+    protected void shutdown() {
+        super.shutdown();
+        try {
+            if (commandSimcom != null) {
+                commandSimcom.close();
+            }
+            if (statusSimcom != null) {
+                statusSimcom.close();
+            }
+            if (healthStatusSocketChannel != null) {
+            healthStatusSocketChannel.close() ;
+            }
+        }
+        catch (java.io.IOException ioe) {
+        }
     }
+
+    /**
+     * Makes initialization as needed. This is called before startup().
+     *
+     * @see #startup
+     */
+    @Override
+    protected void initialize(String[] args) {
+        super.initialize(args);
+        actionController = new SimControlActionController();
+
+        getInitializationPacket();
+    }
+
+    /**
+     * Starts things such as establishing socket communication, and starting monitor tasks.
+     * This is called after startup.
+     *
+     * @see #initialize
+     * @see #startup
+     */
+    @Override
+    protected void ready() {
+    	super.ready();
+
+    	logoImagePanel.start();
+
+    	// The following code was commented out and moved to the end of startup()
+    	// due to framework having issues with certain Java versions. In certain Java
+    	// version such as JDK1.6.0_20, ready() never gets called???
+    	// 05-24-2011, found out that if there was any SwingTask or Thread started
+    	// before ready() in application framework, JDK1.6.0_20 would fail to realize
+    	// the startup() is done. That's why ready() never gets called even though startup()
+    	// is done. So modified the code to start the logo animation player after startup()
+    	// and moved the following code back to where it should be.
+        if (commandSimcom == null) {
+        	logoImagePanel.pause();
+            Object[] keys = actionMap.allKeys();
+            // If there is no server connection, disable all actions except connect and quit.
+            for (int i = 0; i < keys.length; i++) {
+                String theKey = (String)keys[i];
+                if (!(theKey.equals("connect") || theKey.equals("quit"))) {
+                    getAction(theKey).setEnabled(false);
+                }
+            }
+            String errMsg = "No server connection. Please connect!";
+			printErrorMessage(errMsg);
+            return;
+        }
+        
+        if (isRestartOptionOn) {
+        	printSendHS();
+        }
+        
+        scheduleGetSimState();
+
+        startStatusMonitors();
+    }
+
+    /**
+     * Starts building GUI. This is called after initialize.
+     * Once startup() is done, ready() is called.
+     *
+     * @see #initialize
+     * @see #ready
+     */
+    @Override
+    protected void startup() {
+        super.startup();
+
+        // dont't want to the confirmation dialog for sim control panel
+    	removeExitListener(exitListener);
+
+        View view = getMainView();
+        view.setComponent(createMainPanel());
+        view.setMenuBar(createMenuBar());
+        view.setToolBar(createToolBar());
+        view.setStatusBar(createStatusBar());
+
+        if(errOnInitConnect && (runningSimList != null) ) {
+            runningSimList.addItem("localhost : " + port);  
+        } 
+
+        show(view);
+    }
+    
 
     
 
@@ -622,111 +733,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         return statusMsgPanel;
     }
 
-    /**
-     * Cleans up the socket communication before exiting the application.
-     */
-    @Override
-    protected void shutdown() {
-        super.shutdown();
-        try {
-            if (commandSimcom != null) {
-                commandSimcom.close();
-            }
-            if (statusSimcom != null) {
-                statusSimcom.close();
-            }
-            if (healthStatusSocketChannel != null) {
-            healthStatusSocketChannel.close() ;
-            }
-        }
-        catch (java.io.IOException ioe) {
-        }
-    }
-
-    /**
-     * Makes initialization as needed. This is called before startup().
-     *
-     * @see #startup
-     */
-    @Override
-    protected void initialize(String[] args) {
-        super.initialize(args);
-        actionController = new SimControlActionController();
-
-        getInitializationPacket();
-    }
-
-    /**
-     * Starts things such as establishing socket communication, and starting monitor tasks.
-     * This is called after startup.
-     *
-     * @see #initialize
-     * @see #startup
-     */
-    @Override
-    protected void ready() {
-    	super.ready();
-
-    	logoImagePanel.start();
-
-    	// The following code was commented out and moved to the end of startup()
-    	// due to framework having issues with certain Java versions. In certain Java
-    	// version such as JDK1.6.0_20, ready() never gets called???
-    	// 05-24-2011, found out that if there was any SwingTask or Thread started
-    	// before ready() in application framework, JDK1.6.0_20 would fail to realize
-    	// the startup() is done. That's why ready() never gets called even though startup()
-    	// is done. So modified the code to start the logo animation player after startup()
-    	// and moved the following code back to where it should be.
-        if (commandSimcom == null) {
-        	logoImagePanel.pause();
-            Object[] keys = actionMap.allKeys();
-            // If there is no server connection, disable all actions except connect and quit.
-            for (int i = 0; i < keys.length; i++) {
-                String theKey = (String)keys[i];
-                if (!(theKey.equals("connect") || theKey.equals("quit"))) {
-                    getAction(theKey).setEnabled(false);
-                }
-            }
-            String errMsg = "No server connection. Please connect!";
-			printErrorMessage(errMsg);
-            return;
-        }
-        
-        if (isRestartOptionOn) {
-        	printSendHS();
-        }
-        
-        scheduleGetSimState();
-
-        startStatusMonitors();
-    }
-
-    /**
-     * Starts building GUI. This is called after initialize.
-     * Once startup() is done, ready() is called.
-     *
-     * @see #initialize
-     * @see #ready
-     */
-    @Override
-    protected void startup() {
-        super.startup();
-
-        // dont't want to the confirmation dialog for sim control panel
-    	removeExitListener(exitListener);
-
-        View view = getMainView();
-        view.setComponent(createMainPanel());
-        view.setMenuBar(createMenuBar());
-        view.setToolBar(createToolBar());
-        view.setStatusBar(createStatusBar());
-
-        if(errOnInitConnect && (runningSimList != null) ) {
-            runningSimList.addItem("localhost : " + port);  
-        } 
-
-        show(view);
-    }
 
     /**
      * Helper method to print the send_hs file to the statusMsgPane.
@@ -898,6 +904,15 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     }
 
     /**
+     * Helper method for setting style attribute.
+     */
+    private void setColorStyleAttr(Style st, Color foreground, Color background) {
+        st.addAttribute(StyleConstants.Foreground, foreground);
+        st.addAttribute(StyleConstants.Background, background);
+        st.addAttribute(StyleConstants.Alignment, StyleConstants.ALIGN_LEFT);
+    }
+
+    /**
      * Enable all buttons on the Commands panel.
      */
     private void enableAllCommands() {
@@ -1040,6 +1055,20 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
      * Creates the main panel for this application.
      */
     @Override
+    protected JComponent createMainPanel() {
+        DefaultPieDataset dataset = new DefaultPieDataset();
+        mainPanel = new JPanel();
+        // Initialize the pie chart here and put the other stuff:
+
+        JFreeChart chart = ChartFactory.createPieChart("Job Execution Status", dataset, true, true, false);
+        ChartPanel chartPanel = new ChartPanel(chart);
+
+        mainPanel.add(chartPanel);
+        
+        return mainPanel;
+    }
+    
+     /*@Override
 	protected JComponent createMainPanel() {
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
 
@@ -1092,7 +1121,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         mainPane.setPreferredSize(new Dimension(800, 600));
 
         return mainPane;
-    }
+    }*/
 
     /**
      * Convenient method for adding Sim run dir and over run fields to the
