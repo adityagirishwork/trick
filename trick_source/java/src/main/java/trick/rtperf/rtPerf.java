@@ -1068,60 +1068,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         return mainPanel;
     }
     
-     /*@Override
-	protected JComponent createMainPanel() {
-        GridBagConstraints gridBagConstraints = new GridBagConstraints();
-
-        JXPanel litePanel = new JXPanel();
-        litePanel.setLayout(new java.awt.GridBagLayout());
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTH;
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.weightx = 0.5;
-        gridBagConstraints.weighty = 0.1;
-        runtimeStatePanel = (JXTitledPanel)createRuntimeStatePanel();
-        litePanel.add(runtimeStatePanel, gridBagConstraints);
-
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
-
-        gridBagConstraints.gridwidth = 1;
-        JPanel commandsPanel = createCommandsPanel();
-        litePanel.add(commandsPanel, gridBagConstraints);
-
-        gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 1;
-        gridBagConstraints.gridwidth= 1;
-        JPanel timePanel = createTimePanel();
-        litePanel.add(timePanel, gridBagConstraints);
-
-        // default trick logo
-        String trickLogoName = resourceMap.getString("trick.logo");
-
-        // user defined trick logo as specified by TRICK_LOGO, use it if it exists.
-        if (UIUtils.getTrickLogo() != null && (new File(UIUtils.getTrickLogo())).exists()) {
-        	trickLogoName = UIUtils.getTrickLogo();
-        }
-
-        logoImagePanel = new AnimationPlayer(trickLogoName);
-        logoImagePanel.setToolTipText("Trick Version " + UIUtils.getTrickVersion());
-
-        JSplitPane topPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, litePanel, logoImagePanel);
-        topPane.setBorder(null);
-
-        JXPanel bottomPanel = new JXPanel();
-        bottomPanel.setLayout(new java.awt.BorderLayout());
-        simOverrunPanel = (JXTitledPanel)createSimOverrunPanel();
-        bottomPanel.add(simOverrunPanel, BorderLayout.NORTH);
-        bottomPanel.add(createStatusMsgPanel(), BorderLayout.CENTER);
-
-        JSplitPane mainPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topPane, bottomPanel);
-        mainPane.setPreferredSize(new Dimension(800, 600));
-
-        return mainPane;
-    }*/
 
     /**
      * Convenient method for adding Sim run dir and over run fields to the
