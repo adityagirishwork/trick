@@ -42,6 +42,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -90,12 +93,14 @@ import trick.common.ui.components.FontChooser;
 import trick.common.ui.panels.AnimationPlayer;
 import trick.common.ui.panels.FindBar;
 import trick.common.utils.VariableServerConnection;
+//import trick.rtperf.rtPerf.JobExecutionEvent;
 import trick.simcontrol.utils.SimControlActionController;
 import trick.simcontrol.utils.SimState;
 
 import org.jfree.chart.*;
 import org.jfree.data.general.DefaultPieDataset;
 
+import java.util.Timer;
 
 public class rtPerf extends TrickApplication implements PropertyChangeListener {
     
@@ -194,6 +199,11 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     private JFreeChart chart;
     private ChartPanel chartPanel;
     private JPanel mainPanel;
+
+    private Map<Integer, DefaultPieDataset> frameToDatasetMap;
+    private Map<Integer, JFreeChart> frameToChartMap;
+
+    private int currentFrame = 0;
 
     //private TraceViewOutputToolBar sToolBar;
 
@@ -1058,15 +1068,87 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     protected JComponent createMainPanel() {
         DefaultPieDataset dataset = new DefaultPieDataset();
         mainPanel = new JPanel();
+
         // Initialize the pie chart here and put the other stuff:
 
         JFreeChart chart = ChartFactory.createPieChart("Job Execution Status", dataset, true, true, false);
         ChartPanel chartPanel = new ChartPanel(chart);
 
+
         mainPanel.add(chartPanel);
         
         return mainPanel;
     }
+
+    /*public int getCurrentFrameNumber() { // Grabs the current frame number.
+        return currentFrame;
+    }
+
+    public class JobExecutionEvent {
+        public String id;
+        public boolean isEOF;
+        public boolean isTOF;
+        public double start;
+        public double stop;
+    
+        public JobExecutionEvent(String identifier, boolean isTopOfFrame, boolean isEndOfFrame, double start_time, double stop_time) {
+            id = identifier;
+            isEOF = isEndOfFrame;
+            isTOF = isTopOfFrame;
+            start = start_time;
+            stop = stop_time;
+        }
+    
+        public String toString() {
+            return ( "JobExecutionEvent: " + id + "," + start + "," + stop );
+        }
+
+        public String getId() {
+            return id;
+        }
+    
+        public double getDurationInFrame(double frameStartTime, double frameEndTime) {
+            // Ensure the job execution is within the frame
+            double startTimeInFrame = Math.max(start, frameStartTime);
+            double endTimeInFrame = Math.min(stop, frameEndTime);
+    
+            return Math.max(0, endTimeInFrame - startTimeInFrame);
+        }
+    }
+
+    public List<JobExecutionEvent> getJobDataForFrame(int frameNumber) {
+    List<JobExecutionEvent> frameJobs = new ArrayList<>();
+
+    try {
+        // Construct a query to fetch job data for the specified frame
+        String query = "trick.var_add(\"frame_" + frameNumber + "_job_data\")";
+        commandSimcom.put(query);
+        commandSimcom.put("trick.var_send()");
+        commandSimcom.put("trick.var_clear()");
+
+        // Retrieve the results from the variable server
+        String[] results = commandSimcom.get().split("\t");
+
+        // Parse the results to extract job information
+        // The exact parsing logic will depend on the format of the data returned by the variable server
+        for (String jobData : results) {
+            String[] jobInfo = jobData.split(",");
+            String jobId = jobInfo[0];
+            boolean isTOF = jobInfo[1];
+            boolean isEOF = jobInfo[2];
+            double startTime = Double.parseDouble(jobInfo[3]);
+            double endTime = Double.parseDouble(jobInfo[4]);
+
+            JobExecutionEvent jobEvent = new JobExecutionEvent(jobId, isTOF, isEOF, startTime, endTime);
+            frameJobs.add(jobEvent);
+        }
+    } catch (Exception e) {
+        // Handle exceptions, e.g., log errors, retry, or notify the user
+        e.printStackTrace();
+    }
+
+    return frameJobs;
+    }*/
     
 
     /**
