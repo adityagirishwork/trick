@@ -101,6 +101,7 @@ import org.jfree.chart.*;
 import org.jfree.data.general.DefaultPieDataset;
 
 import java.util.Timer;
+import java.util.TimerTask;
 
 public class rtPerf extends TrickApplication implements PropertyChangeListener {
     
@@ -1066,19 +1067,47 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
      */
     @Override
     protected JComponent createMainPanel() {
-        DefaultPieDataset dataset = new DefaultPieDataset();
-        mainPanel = new JPanel();
+    DefaultPieDataset dataset = new DefaultPieDataset();
+    mainPanel = new JPanel();
 
-        // Initialize the pie chart here and put the other stuff:
+    // Initialize the pie chart
+    JFreeChart chart = ChartFactory.createPieChart("Job Execution Status", dataset, true, true, false);
+    ChartPanel chartPanel = new ChartPanel(chart);
 
-        JFreeChart chart = ChartFactory.createPieChart("Job Execution Status", dataset, true, true, false);
-        ChartPanel chartPanel = new ChartPanel(chart);
+    mainPanel.add(chartPanel);
 
+    Timer timer = new Timer();
+    timer.scheduleAtFixedRate(new TimerTask() {
+        @Override
+        public void run() {
+            // Fetch data from the variable server
+            commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\")");
+            commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_trick_id\")");
+            commandSimcom.put("trick.var_add(\"frame_log.frame_log.job_user_id\")");
+            commandSimcom.put("trick.var_send()");
+            commandSimcom.put("trick.var_clear()");
 
-        mainPanel.add(chartPanel);
-        
-        return mainPanel;
-    }
+            String[] results = commandSimcom.get().split("\t");
+
+            // Parse the results to extract job information
+            // Assuming the format of the results is: job_time, job_trick_id, job_user_id
+            for (String jobData : results) {
+                String[] jobInfo = jobData.split(",");
+                double jobTime = Double.parseDouble(jobInfo[0]);
+                String jobId = jobInfo[1];
+                String userId = jobInfo[2];
+
+                // Add the job to the pie chart dataset
+                dataset.setValue(userId + " - " + jobId, jobTime);
+            }
+
+            // Update the chart
+            chart.fireChartChanged();
+        }
+    }, 0, 1000);
+
+    return mainPanel;
+}
 
     /*public int getCurrentFrameNumber() { // Grabs the current frame number.
         return currentFrame;
