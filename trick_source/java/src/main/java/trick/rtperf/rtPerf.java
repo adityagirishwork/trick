@@ -206,6 +206,10 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
     private int currentFrame = 0;
 
+    private double varCycleRate = 1.000;
+
+    
+
     //private TraceViewOutputToolBar sToolBar;
 
     //========================================
@@ -383,7 +387,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
             simState.setRunPath(simRunDir);
 
-            // MODIFY ALL THE STUFF BELOW TO GET THE RELEVANT INFORMATION FOR THE USE CASE. This is also where I need to change the GUI display.
             
             for (int i = 1; i < simRunDirField.length; i++) {
             	/**
@@ -420,8 +423,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                 message_port = Integer.parseInt(results[1]) ;
 
             }
-
-            // Modify the GUI here.
 
             // If simOverrunPanel is already created, meaning the GUI was setup without connecting to the server.
             // Now, the user hits the Connect button to connect. Therefore, we need to update this panel once
@@ -501,7 +502,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     protected void ready() {
     	super.ready();
 
-    	logoImagePanel.start();
+    	//logoImagePanel.start();
 
     	// The following code was commented out and moved to the end of startup()
     	// due to framework having issues with certain Java versions. In certain Java
@@ -512,7 +513,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     	// is done. So modified the code to start the logo animation player after startup()
     	// and moved the following code back to where it should be.
         if (commandSimcom == null) {
-        	logoImagePanel.pause();
+        	//logoImagePanel.pause();
             Object[] keys = actionMap.allKeys();
             // If there is no server connection, disable all actions except connect and quit.
             for (int i = 0; i < keys.length; i++) {
@@ -597,153 +598,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 		}
 	}
 
-    /**
-     * Creates the panel for showing the sim running progress as well as its status text.
-     */
-    private JPanel createRuntimeStatePanel() {
-        JXTitledPanel titledPanel = new JXTitledPanel();
-        titledPanel.setBorder(BorderFactory.createTitledBorder(""));
-        titledPanel.setTitle("Initial");
-        progressBar = new JProgressBar(0, 100);
-        progressBar.setValue(0);
-        progressBar.setStringPainted(true);
-        titledPanel.add(progressBar, BorderLayout.CENTER);
-        progressBar.setEnabled(enableProgressBar);
-        return titledPanel;
-    }
-
-    /**
-     * Creates the panel for holding all the command buttons.
-     */
-    private JPanel createCommandsPanel() {
-    	JXTitledPanel titledCommandsPanel = new JXTitledPanel();
-    	titledCommandsPanel.setBorder(BorderFactory.createEmptyBorder(5,10,10,10));
-    	titledCommandsPanel.setTitle("Commands");
-        JXPanel commandsPanel = new JXPanel();
-        titledCommandsPanel.setContentContainer(commandsPanel);
-        
-        // 2 columns and 5 rows, each component has the same width and height.
-        GridLayout gridLayout = new GridLayout(5,2,2,4);
-        
-        commandsPanel.setLayout(gridLayout);
-
-        commandsPanel.add(new JButton(getAction("stepSim")));
-
-        dataRecButton = new JToggleButton(getAction("recordingSim"));
-        dataRecButton.setToolTipText("Data Recording On/Off");
-        // By default, Data Recording is On.
-        dataRecButton.setSelected(true);
-
-        dataRecButton.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent evt) {
-                if (evt.getStateChange() == ItemEvent.SELECTED) {                   
-                    dataRecButton.setText("Data Rec On");
-                } else {                    
-                     dataRecButton.setText("Data Rec Off");                  
-                }
-            }
-        });
-
-        realtimeButton = new JToggleButton(getAction("realtime"));
-        realtimeButton.setSelected(true);
-        
-        commandsPanel.add(dataRecButton);
-        commandsPanel.add(new JButton(getAction("startSim")));
-        commandsPanel.add(realtimeButton);
-        commandsPanel.add(new JButton(getAction("freezeSim")));
-
-        dumpChkpntASCIIButton = new JToggleButton(getAction("dumpChkpntASCII"));
-        commandsPanel.add(dumpChkpntASCIIButton);
-
-        commandsPanel.add(new JButton(getAction("shutdownSim")));
-
-        loadChkpntButton = new JToggleButton(getAction("loadChkpnt"));
-        commandsPanel.add(loadChkpntButton);
-
-        liteButton = new JToggleButton(getAction("lite"));
-        liteButton.setSelected(false);
-        liteButton.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent evt) {
-                if (evt.getStateChange() == ItemEvent.SELECTED) {
-                	liteButton.setText("Full");
-                } else {
-                	liteButton.setText("Lite");
-                }
-            }
-        });
-
-        commandsPanel.add(liteButton);
-
-        commandsPanel.add(new JButton(getAction("quit")));
-
-        return titledCommandsPanel;
-    }
-
-    /**
-     * Creates the panel for all the time display.
-     */
-    private JPanel createTimePanel() {
-        JXTitledPanel titledTimePanel = new JXTitledPanel();
-        titledTimePanel.setBorder(BorderFactory.createEmptyBorder(5,10,10,10));
-
-        titledTimePanel.setTitle("Time");
-        JXPanel timePanel = new JXPanel();
-        titledTimePanel.setContentContainer(timePanel);
-
-        // 1 column and 4 rows, each component has the same width and height.
-        GridLayout gridLayout = new GridLayout(4,1,2,6);
-
-        timePanel.setLayout(gridLayout);
-
-        JXLabel recLabel = new JXLabel("RET (sec)");
-        timePanel.add(recLabel);
-
-        recTime = new JTextField("0.00");
-        recTime.setEditable(false);
-        timePanel.add(recTime);
-
-        // extra spaces are for when look and feel is changed to have enough spaces
-        timePanel.add(new JXLabel("Sim / Real Time"));
-
-        simRealtimeRatio = new JTextField("0.00");
-        //simRealtimeRatio.setPreferredSize(simRealtimeRatio.getMinimumSize());
-        simRealtimeRatio.setEditable(false);
-        timePanel.add(simRealtimeRatio);
-
-        return titledTimePanel;
-    }
-
-    /**
-     * Creates the panel for displaying the sim run and overruns information.
-     */
-    private JPanel createSimOverrunPanel() {
-        JXTitledPanel titledPanel = new JXTitledPanel();
-        titledPanel.setBorder(BorderFactory.createTitledBorder(""));
-        titledPanel.setTitle("Simulations/Overruns");
-
-        addFieldsToSimOverrunPanel(titledPanel);
-        return titledPanel;
-    }
-
-    
-    /**
-     * Creates the panel for displaying the sim health status messages.
-     */
-    private JPanel createStatusMsgPanel() {
-        statusMsgPane = new JXEditorPane();
-        statusMsgPane.setDocument(new DefaultStyledDocument());
-        statusMsgPane.setEditorKit(new StyledEditorKit());    
-        statusMsgPane.putClientProperty(JXEditorPane.HONOR_DISPLAY_PROPERTIES, true);
-        statusMsgPane.setBackground(Color.black);
-
-        int curr_font_size = statusMsgPane.getFont().getSize() ;
-        Font font = new Font("Monospaced", Font.PLAIN, curr_font_size);
-        statusMsgPane.setFont(font);
-
-        JPanel statusMsgPanel = UIUtils.createSearchableTitledPanel("Status Messages", statusMsgPane, new FindBar(statusMsgPane.getSearchable()));
-        return statusMsgPanel;
-    }
-
 
     /**
      * Helper method to print the send_hs file to the statusMsgPane.
@@ -817,7 +671,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             statusSimcom.put("trick.var_cycle(0.25)\n");
 
             getAction("connect").setEnabled(false);         
-            runningSimList.setEnabled(false);
+            //runningSimList.setEnabled(false);
         }
         catch (NumberFormatException nfe) {
 
@@ -827,7 +681,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             statusLabel.setEnabled(false);
             statusSimcom = null;
             getAction("connect").setEnabled(true);           
-            runningSimList.setEnabled(true);
+            //runningSimList.setEnabled(true);
             getAction("startSim").setEnabled(false);
         }
     }
@@ -1076,23 +930,28 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
     mainPanel.add(chartPanel);
 
+    // Fill in all of this stuff with the code initialize.
+
+    /*try {
+        commandSimcom.setCycle(varCycleRate);
+        commandSimcom.setSync();
+        commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\")");
+        commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_trick_id\")");
+        commandSimcom.put("trick.var_add(\"frame_log.frame_log.job_user_id\")");
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+
     Timer timer = new Timer();
-    timer.scheduleAtFixedRate(new TimerTask() {
+    TimerTask timingtask = new TimerTask() {
         @Override
         public void run() {
 
             try {
-                // Fetch data from the variable server
-                commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\")");
-                commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_trick_id\")");
-                commandSimcom.put("trick.var_add(\"frame_log.frame_log.job_user_id\")");
-                commandSimcom.put("trick.var_send()");
-                commandSimcom.put("trick.var_clear()");
 
                 String[] results = commandSimcom.get().split("\t");
 
                 // Parse the results to extract job information
-                // Assuming the format of the results is: job_time, job_trick_id, job_user_id
                 for (String jobData : results) {
                     String[] jobInfo = jobData.split(",");
                     double jobTime = Double.parseDouble(jobInfo[0]);
@@ -1109,80 +968,13 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                 e.printStackTrace();
             }
         }
-    }, 0, 1000);
+    };
+
+
+    timer.scheduleAtFixedRate(timingtask, 0, (long) varCycleRate*1000);*/
 
     return mainPanel;
 }
-
-    /*public int getCurrentFrameNumber() { // Grabs the current frame number.
-        return currentFrame;
-    }
-
-    public class JobExecutionEvent {
-        public String id;
-        public boolean isEOF;
-        public boolean isTOF;
-        public double start;
-        public double stop;
-    
-        public JobExecutionEvent(String identifier, boolean isTopOfFrame, boolean isEndOfFrame, double start_time, double stop_time) {
-            id = identifier;
-            isEOF = isEndOfFrame;
-            isTOF = isTopOfFrame;
-            start = start_time;
-            stop = stop_time;
-        }
-    
-        public String toString() {
-            return ( "JobExecutionEvent: " + id + "," + start + "," + stop );
-        }
-
-        public String getId() {
-            return id;
-        }
-    
-        public double getDurationInFrame(double frameStartTime, double frameEndTime) {
-            // Ensure the job execution is within the frame
-            double startTimeInFrame = Math.max(start, frameStartTime);
-            double endTimeInFrame = Math.min(stop, frameEndTime);
-    
-            return Math.max(0, endTimeInFrame - startTimeInFrame);
-        }
-    }
-
-    public List<JobExecutionEvent> getJobDataForFrame(int frameNumber) {
-    List<JobExecutionEvent> frameJobs = new ArrayList<>();
-
-    try {
-        // Construct a query to fetch job data for the specified frame
-        String query = "trick.var_add(\"frame_" + frameNumber + "_job_data\")";
-        commandSimcom.put(query);
-        commandSimcom.put("trick.var_send()");
-        commandSimcom.put("trick.var_clear()");
-
-        // Retrieve the results from the variable server
-        String[] results = commandSimcom.get().split("\t");
-
-        // Parse the results to extract job information
-        // The exact parsing logic will depend on the format of the data returned by the variable server
-        for (String jobData : results) {
-            String[] jobInfo = jobData.split(",");
-            String jobId = jobInfo[0];
-            boolean isTOF = jobInfo[1];
-            boolean isEOF = jobInfo[2];
-            double startTime = Double.parseDouble(jobInfo[3]);
-            double endTime = Double.parseDouble(jobInfo[4]);
-
-            JobExecutionEvent jobEvent = new JobExecutionEvent(jobId, isTOF, isEOF, startTime, endTime);
-            frameJobs.add(jobEvent);
-        }
-    } catch (Exception e) {
-        // Handle exceptions, e.g., log errors, retry, or notify the user
-        e.printStackTrace();
-    }
-
-    return frameJobs;
-    }*/
     
 
     /**
@@ -1521,5 +1313,48 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
     public static void main(String[] args) {
         Application.launch(rtPerf.class, args);
+
+        // Arrays.toString(args) converts such as localhost 7000 -r to [localhost, 7000, -r],
+        // so need to remove [, ] and all white spaces.
+        String commandLine = (Arrays.toString(args)).replace("[","").replace("]", "").replaceAll("\\s+", "");
+
+        // check to see if -r or -restart is used
+        Pattern restartOptionPattern = Pattern.compile("(\\-r|\\-restart)(,|$)");
+        Matcher matcher = restartOptionPattern.matcher(commandLine);
+
+        // if -r | -restart is used, set the flag and then remove it from the command line 
+        if (matcher.find()) {
+            isRestartOptionOn = true;
+            commandLine = matcher.replaceAll("");
+        }
+
+        // check to see if -auto_exit is used
+        Pattern autoExitOptionPattern = Pattern.compile("(\\-auto\\_exit)(,|$)");
+        Matcher autoExitMatcher = autoExitOptionPattern.matcher(commandLine);
+
+        if (autoExitMatcher.find()) {
+            isAutoExitOn = true;
+            commandLine = autoExitMatcher.replaceAll("");            
+        } 
+        
+        Scanner commandScanner = new Scanner(commandLine).useDelimiter(",");
+        // now need to figure out host and port, if not specified, available host&port will be listed
+        if (commandScanner.hasNextInt()) {
+        	port = commandScanner.nextInt();
+        	if (commandScanner.hasNext()) {
+        		host = commandScanner.next();
+        	}
+        } else {
+        	if (commandScanner.hasNext()) {
+        		host = commandScanner.next();
+        		if (commandScanner.hasNextInt()) {
+        			port = commandScanner.nextInt();
+        		}
+        	}
+        }      
+        
+        if (commandScanner != null) {
+        	commandScanner.close();
+        }
     }
 }
