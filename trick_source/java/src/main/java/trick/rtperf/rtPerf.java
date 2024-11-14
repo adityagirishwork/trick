@@ -810,9 +810,9 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
      * Updates the GUI as needed if SIM states are changed.
      */
     private void updateGUI() {
-        String newStatusDesc = SimState.SIM_MODE_DESCRIPTION[simState.getMode()];
+        /*String newStatusDesc = SimState.SIM_MODE_DESCRIPTION[simState.getMode()];
 
-        recTime.setText(simState.getTwoFractionFormatted(simState.getExecOutTime()));
+        //recTime.setText(simState.getTwoFractionFormatted(simState.getExecOutTime()));
 
         if (simState.getRealtimeActive() == 1) {
         	if (realtimeButton.getText().equals("RealTime Off")) {
@@ -852,7 +852,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
                 case SimState.FREEZE_MODE:
                     if ( currentSimStatusDesc.equals("PreCheckpoint") ) {
-                        ;/* Skip a cycle so the checkpoint status has time to display briefly */
+                        ;/* Skip a cycle so the checkpoint status has time to display briefly 
                     } else {
                         enableAllCommands();
                         setActionsEnabled("freezeSim,quit", false);
@@ -882,7 +882,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
             runtimeStatePanel.setTitle(newStatusDesc);
             currentSimStatusDesc = runtimeStatePanel.getTitle();
-        }
+        }*/
     }
 
     /**
@@ -1023,7 +1023,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
          * Main task. Executed in background thread.
          */
         @Override
-        public Void doInBackground() {
+        public Void doInBackground() { /*
             charset = Charset.forName("ISO-8859-1");
             CharsetDecoder decoder = charset.newDecoder();
             ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 1024);
@@ -1065,7 +1065,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                  *  current hostname, but it is working if localhost is
                  *  substituted as the hostname. So change it now
                  *  for future use when TV and MTV are launched.
-                 */
+                 
                 host = LOCALHOST;
             }
 
@@ -1155,7 +1155,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                         break;
                     }
                 }
-            }
+            }*/
             return null;
         }
 
