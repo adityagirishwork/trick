@@ -48,9 +48,9 @@ namespace Trick {
 
             unsigned int plots_per_page;              /**< trick_io(*io) trick_units(--) number of plots per page */
             /** Cyclic jobs timeline to log, dimensioned as [num_threads][tl_max_samples].\n */
-            Trick::timeline_t **timeline;       /**<  trick_io(**) */
+            Trick::timeline_t **timeline;       /**<  trick_io(*io) */
             /** Non-Cyclic jobs timeline to log, dimensioned as [num_threads][tl_max_samples].\n */
-            Trick::timeline_t **timeline_other; /**<  trick_io(**) */
+            Trick::timeline_t **timeline_other; /**<  trick_io(*io) */
 
             /** Number of threads in this sim.\n */
             int num_threads;                /**<  trick_io(**) */
