@@ -201,26 +201,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     private ChartPanel chartPanel;
     private JPanel mainPanel;
 
-    private Map<Integer, DefaultPieDataset> frameToDatasetMap;
-    private Map<Integer, JFreeChart> frameToChartMap;
-
-    private int currentFrame = 0;
-
-    private double varCycleRate = 1.000;
-
-    
-
-    //private TraceViewOutputToolBar sToolBar;
-
-    //========================================
-    //    Actions
-    //========================================
-    
-    @Action
-    public void startRT() {
-        launchTrickApplication("rtperf", "--host " + host + " --port " + port);
-    }
-
     /**
      * Connects to the variable server if {@link VariableServerConnection} is able to be created successfully and
      * starts the communication server for sim health status messages.
@@ -274,20 +254,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
         scheduleGetSimState();
 
-        startStatusMonitors();
     }
-
-    /**
-     * Helper method for starting monitors for sim status as well as health status.
-     */
-	private void startStatusMonitors() {
-		MonitorSimStatusTask monitorSimStatusTask = new MonitorSimStatusTask(this);
-        monitorSimStatusTask.addPropertyChangeListener(this);
-        getContext().getTaskService().execute(monitorSimStatusTask);
-
-        // For receiving hs messages.
-        getContext().getTaskService().execute(new MonitorHealthStatusTask(this));
-	}
 
     //========================================
     //    Set/Get methods
@@ -298,7 +265,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     public void getInitializationPacket() {    	
         String simRunDir = null;
         String[] results = null;      
-        boolean masterslave_enabled;
         try {
 			String errMsg = "Error: RealTimePerformanceApplication:getInitializationPacket()";
             try {
@@ -338,19 +304,10 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
             simState = new SimState();
 
-            commandSimcom.put("trick.var_exists(\"trick_master_slave.master.num_slaves\")");
-            results = commandSimcom.get().split("\t");
-            masterslave_enabled = results[1].equals("1");
-
             // Sends commands to the variable server to add several variables for retrieving simulation details.
             commandSimcom.put("trick.var_set_client_tag(\"rtPerf\")\n");
-            commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\") \n" +
-            		          "trick.var_add(\"trick_frame_log.frame_log.job_trick_id\") \n" +
-                              "trick.var_add(\"frame_log.frame_log.job_user_id\") \n");
-            
-            if (masterslave_enabled) {
-                commandSimcom.put("trick.var_add(\"trick_master_slave.master.num_slaves\") \n");
-            }
+            commandSimcom.put("trick.var_add(\"trick_real_time.rt_sync.rt_monitor\")\n"); // Need to change these simCom commands to somethign
+        
 
             commandSimcom.put("trick.var_send() \n" +
                               "trick.var_clear() \n");
@@ -368,7 +325,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                 simStopTime = terminateTime/execTimeTicValue - simStartTime;
             }
 
-            slaveCount = masterslave_enabled ? Integer.parseInt(results[8]) : 0;
 
             simRunDirField = new JTextField[slaveCount+1];
             overrunField = new JTextField[slaveCount+1];
@@ -389,31 +345,9 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 
             
             for (int i = 1; i < simRunDirField.length; i++) {
-            	/**
-            	 * Commented out the following code as slaves is a vector and can't be accessed at this point.
-                 * Uncomment the following code if we can in the future.
-            	 */
-                /*commandSimcom.put("trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].sim_path\") \n" +
-                                 "trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].S_main_name\") \n ");
-                                  "trick.sim_services.var_add(\"master_slave.master.slaves[" + i + "].run_input_file\") \n" +
-                                  "trick.sim_serives.var_send( ) \n" +
-                                  "trick.sim_services.var_clear( ) \n");
-                results = commandSimcom.get().split("\t");
-                simRunDirField[i].setText(results[1] + java.io.File.separator + results[2] + " " + results[2]);*/
             	simRunDirField[i].setText("Slave " + i);
             }
-            
-            commandSimcom.put("trick.var_exists(\"trick_instruments.debug_pause.debug_pause_flag\")\n") ;
-            results = commandSimcom.get().split("\t");
-            debug_present = Integer.parseInt(results[1]);
-
-            commandSimcom.put("trick.var_exists(\"trick_real_time.rt_sync.total_overrun\")\n") ;
-            results = commandSimcom.get().split("\t");
-            overrun_present = Integer.parseInt(results[1]);
-
-            commandSimcom.put("trick.var_exists(\"trick_message.mdevice.port\")\n") ;
-            results = commandSimcom.get().split("\t");
-            message_present = Integer.parseInt(results[1]);
+        
 
             if ( message_present == 1 ) {
                 commandSimcom.put("trick.var_add(\"trick_message.mdevice.port\") \n" +
@@ -422,13 +356,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                 results = commandSimcom.get().split("\t");
                 message_port = Integer.parseInt(results[1]) ;
 
-            }
-
-            // If simOverrunPanel is already created, meaning the GUI was setup without connecting to the server.
-            // Now, the user hits the Connect button to connect. Therefore, we need to update this panel once
-            // it gets connected.
-            if (simOverrunPanel != null) {
-                (new RebuildSimOverrunPanelTask()).execute();
             }
         }
         catch (NumberFormatException nfe) {
@@ -533,7 +460,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         
         scheduleGetSimState();
 
-        startStatusMonitors();
     }
 
     /**
@@ -578,7 +504,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
 			// Set the font color to red and the background to black
 			StyleContext sc = new StyleContext();               
 			Style redStyle = sc.addStyle("Red", null);
-			setColorStyleAttr(redStyle, Color.red, Color.black);
 
 			// Add the error message to the bottom of the message pane
 			doc.insertString(doc.getLength(), err + "\n", redStyle);
@@ -616,7 +541,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
             
             // normal style is white on black
             Style defaultStyle = sc.addStyle("Default", null);
-            setColorStyleAttr(defaultStyle, Color.white, Color.black);
             
             BufferedReader reader = null;
     		try {   			
@@ -747,143 +671,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
     	    }    		
     	}   	
     }
-        
-    /**
-     * Inner class for the task of rebuiding those fields for Sim run & overrun info.
-     * This is used when the user launch Sim Control before starting the server.
-     */
-    private class RebuildSimOverrunPanelTask extends SwingWorker<Void, Void> {
-        @Override
-        public Void doInBackground() {
-            for(int i=2; i<simOverrunPanel.getComponentCount(); i++) {
-                simOverrunPanel.remove(simOverrunPanel.getComponent(i));
-            }
 
-            addFieldsToSimOverrunPanel(simOverrunPanel);
-            return null;
-        }
-        @Override
-		public void done() {
-            simOverrunPanel.validate();
-        }
-    }
-
-    /**
-     * Helper method for setting style attribute.
-     */
-    private void setColorStyleAttr(Style st, Color foreground, Color background) {
-        st.addAttribute(StyleConstants.Foreground, foreground);
-        st.addAttribute(StyleConstants.Background, background);
-        st.addAttribute(StyleConstants.Alignment, StyleConstants.ALIGN_LEFT);
-    }
-
-    /**
-     * Enable all buttons on the Commands panel.
-     */
-    private void enableAllCommands() {
-        for ( String btn : getAllCommandActions() ) {
-            setActionsEnabled( btn, true );
-        }
-    }
-
-    /**
-     * Disable all buttons on the Commands panel.
-     */
-    private void disableAllCommands() {
-        for ( String btn : getAllCommandActions() ) {
-            setActionsEnabled( btn, false );
-        }
-    }
-
-    /**
-     * Returns all {@link Action} names associated with the Commands panel.
-     */
-    private String[] getAllCommandActions() {
-        ArrayList<String> actions = new ArrayList<String>();
-
-        actions.add("stepSim,recordingSim,startSim,realtime,freezeSim," +
-        		"dumpChkpntASCII,shutdownSim,loadChkpnt,lite,quit");
-        return actions.toArray(new String[0]);
-    }
-
-    /**
-     * Updates the GUI as needed if SIM states are changed.
-     */
-    private void updateGUI() {
-        /*String newStatusDesc = SimState.SIM_MODE_DESCRIPTION[simState.getMode()];
-
-        //recTime.setText(simState.getTwoFractionFormatted(simState.getExecOutTime()));
-
-        if (simState.getRealtimeActive() == 1) {
-        	if (realtimeButton.getText().equals("RealTime Off")) {
-        		realtimeButton.setSelected(true);
-        		realtimeButton.setText("RealTime On");
-        		getAction("stepSim").setEnabled(true);
-        	}
-        } else {
-        	if (realtimeButton.getText().equals("RealTime On")) {
-        		realtimeButton.setSelected(false);
-        		realtimeButton.setText("RealTime Off");
-        		getAction("stepSim").setEnabled(false);
-        	}
-        }
-
-        simRealtimeRatio.setText(simState.getTwoFractionFormatted(simState.getSimRealtimeRatio()));
-
-        // Track Master sim overruns
-        overrunField[0].setText(Integer.toString(simState.getOverruns()));
-        if ( simState.getOverruns() > 0 ) {
-            overrunField[0].setForeground(new Color(205, 0, 0));  // red3
-        } else {
-            overrunField[0].setForeground(Color.getColor("#000000"));
-        }
-        simOverrunPanel.revalidate();
-
-        // Update the GUI when that status is changed.
-        if ( !newStatusDesc.equals(currentSimStatusDesc) ) {
-
-            switch ( simState.getMode() ) {
-
-                case SimState.INITIALIZATION_MODE:
-                    enableAllCommands();
-                    setActionsEnabled("startSim,freezeSim,recordingSim,realtime,quit", false);
-                    logoImagePanel.resume();
-                    break;
-
-                case SimState.FREEZE_MODE:
-                    if ( currentSimStatusDesc.equals("PreCheckpoint") ) {
-                        ;/* Skip a cycle so the checkpoint status has time to display briefly 
-                    } else {
-                        enableAllCommands();
-                        setActionsEnabled("freezeSim,quit", false);
-                    }
-                    logoImagePanel.pause();
-                    break;
-
-                case SimState.DEBUG_STEPPING_MODE:
-                case SimState.RUN_MODE:
-                    disableAllCommands();
-                    setActionsEnabled("freezeSim,lite", true);
-                    if (debug_flag != 0) {
-                        setActionsEnabled("stepSim,dumpChkpntASCII", true);
-                    }
-                    logoImagePanel.resume();
-                    break;
-
-                case SimState.EXIT_MODE:
-                case SimState.COMPLETE_MODE:
-                    disableAllCommands();
-                    setActionsEnabled( "lite,quit", true );
-                    statusLabel.setText("Done");
-                    statusLabel.setEnabled(false);
-                    logoImagePanel.stop();
-                    break;
-            }
-
-            runtimeStatePanel.setTitle(newStatusDesc);
-            currentSimStatusDesc = runtimeStatePanel.getTitle();
-        }*/
-    }
 
     /**
      * Convenient method for setting the state of specified actions.
@@ -921,95 +709,23 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
      */
     @Override
     protected JComponent createMainPanel() {
-    DefaultPieDataset dataset = new DefaultPieDataset();
-    mainPanel = new JPanel();
-
-    // Initialize the pie chart
-    JFreeChart chart = ChartFactory.createPieChart("Job Execution Status", dataset, true, true, false);
-    ChartPanel chartPanel = new ChartPanel(chart);
-
-    mainPanel.add(chartPanel);
-
-    // Fill in all of this stuff with the code initialize.
-
-    /*try {
-        commandSimcom.setCycle(varCycleRate);
-        commandSimcom.setSync();
-        commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_time\")");
-        commandSimcom.put("trick.var_add(\"trick_frame_log.frame_log.job_trick_id\")");
-        commandSimcom.put("trick.var_add(\"frame_log.frame_log.job_user_id\")");
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-
-    Timer timer = new Timer();
-    TimerTask timingtask = new TimerTask() {
-        @Override
-        public void run() {
-
-            try {
-
-                String[] results = commandSimcom.get().split("\t");
-
-                // Parse the results to extract job information
-                for (String jobData : results) {
-                    String[] jobInfo = jobData.split(",");
-                    double jobTime = Double.parseDouble(jobInfo[0]);
-                    String jobId = jobInfo[1];
-                    String userId = jobInfo[2];
-
-                    // Add the job to the pie chart dataset
-                    dataset.setValue(userId + " - " + jobId, jobTime);
-                }
-
-                // Update the chart
-                chart.fireChartChanged();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-
-    timer.scheduleAtFixedRate(timingtask, 0, (long) varCycleRate*1000);*/
-
-    return mainPanel;
-}
-    
-
-    /**
-     * Convenient method for adding Sim run dir and over run fields to the
-     * corresponding panel.
-     */
-    private void addFieldsToSimOverrunPanel(JXTitledPanel titledPanel) {
-    	JPanel panel = new JPanel();
-    	panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
-    	
-        JPanel simRunPanel = new JPanel();
-        simRunPanel.setLayout(new BoxLayout(simRunPanel, BoxLayout.Y_AXIS));
-
-        JPanel overRunPanel = new JPanel();
-        overRunPanel.setLayout(new BoxLayout(overRunPanel, BoxLayout.Y_AXIS));
-
-        if (simRunDirField == null) {
-            simRunDirField = new JTextField[1];
-            overrunField = new JTextField[1];
-            for (int ii = 0; ii < simRunDirField.length; ii++) {
-                simRunDirField[ii] = new JTextField();
-                overrunField[ii] = new JTextField();
-            }
-        }
-
-        for (int i = 0; i < simRunDirField.length; i++) {
-            simRunPanel.add(simRunDirField[i]);
-            overRunPanel.add(overrunField[i]);
-        }
+        DefaultPieDataset dataset = new DefaultPieDataset();
+        dataset.setValue("Completed", 60);
+        dataset.setValue("In Progress", 30);
+        dataset.setValue("Failed", 10);
         
-        panel.add(simRunPanel);
-        panel.add(overRunPanel);
+        JFreeChart chart = ChartFactory.createPieChart("Job Execution Status", dataset, true, true, false); // Chart title, dataset, include legend, tooltips, urls
 
-        titledPanel.add(panel, BorderLayout.CENTER);
+        // Create the chart panel to display the chart
+        ChartPanel chartPanel = new ChartPanel(chart);
+        
+        // Create the main panel to hold the chart panel
+        JPanel mainPanel = new JPanel();
+        mainPanel.add(chartPanel);
+
+        return mainPanel;
     }
+
     
     /**
      * Inner class for the task of monitoring health status.
@@ -1023,139 +739,7 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
          * Main task. Executed in background thread.
          */
         @Override
-        public Void doInBackground() { /*
-            charset = Charset.forName("ISO-8859-1");
-            CharsetDecoder decoder = charset.newDecoder();
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 1024);
-
-            CharBuffer charBuffer = null;
-            Document doc = statusMsgPane.getDocument();
-            StyleContext sc = new StyleContext();
-            
-            // normal style is white on black
-            Style defaultStyle = sc.addStyle("Default", null);
-            
-            setColorStyleAttr(defaultStyle, Color.white, Color.black);
-            
-            // green - is there any reason not using the Color.green?
-            Color greenColor = new Color(150,230,30);
-            Style greenStyle = sc.addStyle("Green", null);
-            setColorStyleAttr(greenStyle, greenColor, Color.black);
-            
-            // yellow
-            Style yellowStyle = sc.addStyle("Yellow", null);
-            setColorStyleAttr(yellowStyle, Color.yellow, Color.black);
-            
-            // red
-            Style redStyle = sc.addStyle("Red", null);
-            setColorStyleAttr(redStyle, Color.red, Color.black);
-            
-            // cyan
-            Style cyanStyle = sc.addStyle("Cyan", null);
-            setColorStyleAttr(cyanStyle, Color.cyan, Color.black);
-            
-            try {
-                healthStatusSocketChannel = SocketChannel.open() ;
-                healthStatusSocketChannel.configureBlocking(true) ;
-
-                healthStatusSocketChannel.connect(new InetSocketAddress(host, message_port)) ;
-            } catch (IOException e) {
-            } catch (UnresolvedAddressException uae) {
-                /** Connection to variable server is not working with the
-                 *  current hostname, but it is working if localhost is
-                 *  substituted as the hostname. So change it now
-                 *  for future use when TV and MTV are launched.
-                 
-                host = LOCALHOST;
-            }
-
-            while (true) {
-                try {
-                    if (healthStatusSocketChannel != null) {
-                        try {
-                            byteBuffer.clear();
-                            int numBytesRead = healthStatusSocketChannel.read(byteBuffer);
-                            if (numBytesRead == -1) {
-                                continue;
-                            } else {
-                                byteBuffer.flip();
-                                try {
-                                    charBuffer = decoder.decode(byteBuffer);
-
-                                    String charStr = charBuffer.toString();
-
-                                    int returnCounts = statusMsgPane.getText().split("\n", -1).length;
-
-                                    if (returnCounts > 99999) {
-                                    	doc.remove(0, doc.getLength());
-                                    }
-
-                                    // interpret ansi escape color sequences
-                                    String tokens[] = charStr.split("\033") ;
-                                    // ansi escape is 4 characters: [NNm where NN is 2 digit color number
-                                    for (String token : tokens) {
-                                        int ansicolor = 0 ;
-                                        String coloredpart = token;
-                                        if (token.charAt(0) == '\133') { // open square bracket
-                                        	// get the 1st m locaction
-                                        	int mLoc = token.indexOf('m');
-                                        	if (mLoc != -1) {
-                                        		try {
-                                        			ansicolor = Integer.parseInt(token.substring(1, mLoc));
-                                        			coloredpart = token.substring(mLoc+1);
-                                        		} catch (Exception ex) {
-                                        			// do nothing, coloredpart is printed in normal
-                                        		}
-                                        	}
-                                        }
-                                        if (coloredpart.length() == 0) {
-                                            continue;
-                                        }
-                                        switch (ansicolor) {
-                                            case 0 :  // normal
-                                                doc.insertString(doc.getLength(), coloredpart, defaultStyle) ;
-                                                break;
-                                            case 32 : // green
-                                                doc.insertString(doc.getLength(), coloredpart, greenStyle) ;
-                                                break;
-                                            case 33 : // yellow
-                                                doc.insertString(doc.getLength(), coloredpart, yellowStyle) ;
-                                                break;
-                                            case 31 : // red
-                                                doc.insertString(doc.getLength(), coloredpart, redStyle) ;
-                                                break;
-                                            case 36 : // cyan
-                                                doc.insertString(doc.getLength(), coloredpart, cyanStyle) ;
-                                                break;
-                                            default : // normal
-                                                doc.insertString(doc.getLength(), coloredpart, defaultStyle) ;
-                                                break;
-                                        }
-                                    }
-                                    // Always scroll to the end
-                                    statusMsgPane.setCaretPosition(doc.getLength());
-                                    statusMsgPane.validate();
-
-                                } catch (CharacterCodingException e) {
-                                    continue;
-                                } catch (BadLocationException ble) {
-                                    continue;
-                                }
-                                continue;
-                            }
-                        } catch (IOException e) {
-                            break;
-                        } catch (NotYetConnectedException nc) {
-                        }
-                    }
-                } finally {
-                    if (runtimeStatePanel.getTitle() == "Sim Complete") {
-                        // Always scroll to the end
-                        statusMsgPane.setCaretPosition(statusMsgPane.getDocument().getLength());
-                        break;
-                    }
-                }
-            }*/
+        public Void doInBackground() { 
             return null;
         }
 
@@ -1262,7 +846,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
                                 simState.setOverruns(Integer.parseInt(results[ii]));
                                 ii++ ;
                             }
-                            updateGUI();
                         } else {
                             // break the while (true) loop
                             break;
@@ -1278,19 +861,6 @@ public class rtPerf extends TrickApplication implements PropertyChangeListener {
         @Override
         protected void succeeded(Void ignored) {
             simState.setMode(SimState.COMPLETE_MODE);
-
-            // Commented out the following code so that the sim time won't be set unnecessary.
-            // However, sometimes you probably will see the sim time is not updated
-            // to the stop time when it's completed due to the reason as stated following.
-            // Trick 7 seems to have this issue too and I guess people are ok with it.
-            /*if (modeIndex != SimState.FREEZE_MODE) {
-                // due to the delay on client side, when the server is done and closes the connection,
-                // the client might have not received the latest time. so making sure to show
-                // the stop time at the end.
-                simState.setExecOutTime(simStopTime);
-                setProgress(100);
-            }*/
-            updateGUI();
         }
 
         @Override
